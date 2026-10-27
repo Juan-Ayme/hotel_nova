@@ -2,28 +2,62 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Hotel, Menu, X, User, CalendarDays } from 'lucide-react';
+import {
+  Hotel,
+  Menu,
+  X,
+  User,
+  CalendarDays,
+  LayoutDashboard,
+  FileText,
+  LogOut,
+  ChevronDown,
+} from 'lucide-react';
 import Image from 'next/image';
 import ThemeToggle from '@/components/public/ThemeToggle';
 
+// Enlaces públicos oficiales (Mis Reservas se traslada al menú privado de usuario)
 const NAV_LINKS = [
   { href: '/', label: 'Inicio' },
   { href: '/nosotros', label: 'Nosotros' },
   { href: '/habitaciones', label: 'Habitaciones' },
   { href: '/reservaciones', label: 'Reservaciones' },
-  { href: '/mis-reservas', label: 'Mis Reservas' },
   { href: '/contacto', label: 'Contacto' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState<{ email?: string; user_metadata?: { full_name?: string; avatar_url?: string } } | null>(null);
+  const [user, setUser] = useState<{
+    email?: string;
+    user_metadata?: { full_name?: string; avatar_url?: string };
+  } | null>(null);
   const [isStaff, setIsStaff] = useState(false);
 
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar menú desplegable al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Cerrar menús al cambiar de página
+  useEffect(() => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Detección de scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -32,6 +66,7 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Suscripción al estado de autenticación y rol de staff
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
@@ -71,9 +106,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full px-4 sm:px-6 lg:px-8 pt-3 pb-2 transition-all duration-300">
       <div
         className={`max-w-7xl mx-auto rounded-full transition-all duration-300 px-4 sm:px-6 ${
-          scrolled
-            ? 'apple-dock shadow-2xl py-2'
-            : 'apple-glass py-2.5'
+          scrolled ? 'apple-dock shadow-2xl py-2' : 'apple-glass py-2.5'
         }`}
       >
         <div className="flex items-center justify-between h-14">
@@ -114,24 +147,25 @@ export default function Navbar() {
             })}
           </nav>
 
-          {/* Acciones de la Derecha estilo Apple */}
+          {/* Acciones de la Derecha */}
           <div className="hidden sm:flex items-center gap-2.5">
             {/* Conmutador de Modo Oscuro / Modo Claro */}
             <ThemeToggle />
 
+            {/* Usuario Autenticado con Dropdown Popover */}
             {user ? (
-              <div className="flex items-center gap-2">
-                {isStaff && (
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-[11px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-500/25 transition-colors"
-                  >
-                    <span>Panel Staff</span>
-                  </Link>
-                )}
-                <Link
-                  href="/mis-reservas"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-white/[0.04] border border-stone-200 dark:border-white/[0.08] text-xs text-stone-800 dark:text-stone-200 hover:border-orange-500/30 transition-colors"
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((prev) => !prev)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
+                    userMenuOpen
+                      ? 'bg-orange-500/15 border-orange-500/40 text-stone-900 dark:text-white shadow-md ring-2 ring-orange-500/20'
+                      : 'bg-stone-100 dark:bg-white/[0.04] border-stone-200 dark:border-white/[0.08] text-stone-800 dark:text-stone-200 hover:border-orange-500/30'
+                  }`}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
+                  title="Opciones de cuenta"
                 >
                   {user.user_metadata?.avatar_url ? (
                     <Image
@@ -139,22 +173,87 @@ export default function Navbar() {
                       alt="Avatar"
                       width={22}
                       height={22}
-                      className="rounded-full ring-1 ring-orange-500"
+                      className="rounded-full ring-1 ring-orange-500/60"
                     />
                   ) : (
-                    <User className="w-3.5 h-3.5 text-orange-600 dark:text-amber-400" />
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center text-white text-[10px] font-bold">
+                      {(user.user_metadata?.full_name || user.email || 'U')[0].toUpperCase()}
+                    </div>
                   )}
-                  <span className="max-w-[100px] truncate font-medium text-[11px]">
+                  <span className="max-w-[110px] truncate font-medium text-xs">
                     {user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0]}
                   </span>
-                </Link>
-                <Link
-                  href="/auth/signout"
-                  className="text-xs text-stone-500 dark:text-stone-400 hover:text-rose-500 px-2 py-1 transition-colors"
-                  title="Cerrar sesión"
-                >
-                  Salir
-                </Link>
+                  {isStaff && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-orange-600 text-white shadow-xs">
+                      Admin
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${
+                      userMenuOpen ? 'rotate-180 text-orange-600 dark:text-orange-400' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Popover estilo Apple */}
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl apple-glass-card border border-stone-200 dark:border-white/[0.1] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-stone-900 dark:text-white">
+                    {/* Tarjeta de Identificación */}
+                    <div className="px-3 py-2.5 border-b border-stone-200/80 dark:border-white/[0.06]">
+                      <p className="text-xs font-bold truncate">
+                        {user.user_metadata?.full_name || 'Usuario'}
+                      </p>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate mt-0.5">
+                        {user.email}
+                      </p>
+                      <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-stone-100 dark:bg-white/[0.06] border border-stone-200 dark:border-white/[0.08] text-stone-600 dark:text-stone-300">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isStaff ? 'bg-orange-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                        <span>{isStaff ? 'Personal Administrativo' : 'Huésped Registrado'}</span>
+                      </div>
+                    </div>
+
+                    {/* Enlaces según Rol */}
+                    <div className="py-1 space-y-0.5">
+                      {/* Opción para Administrador / Staff */}
+                      {isStaff && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 transition-colors"
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          <span>Panel de Administración</span>
+                        </Link>
+                      )}
+
+                      {/* Opción Mis Reservas (para cliente y admin) */}
+                      <Link
+                        href="/mis-reservas"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-white/[0.06] transition-colors"
+                      >
+                        <FileText className="w-4 h-4 text-orange-600 dark:text-amber-400" />
+                        <span>Mis Reservas</span>
+                      </Link>
+                    </div>
+
+                    {/* Salir */}
+                    <div className="pt-1 mt-1 border-t border-stone-200/80 dark:border-white/[0.06]">
+                      <Link
+                        href="/auth/signout"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Cerrar Sesión</span>
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <Link
@@ -162,10 +261,11 @@ export default function Navbar() {
                 className="apple-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-stone-700 dark:text-stone-200 hover:text-stone-900 dark:hover:text-white transition-all"
               >
                 <User className="w-3.5 h-3.5 text-orange-600 dark:text-amber-400" />
-                <span>Ingresar / Registrarse</span>
+                <span>Ingresar</span>
               </Link>
             )}
 
+            {/* Botón de Acción Principal */}
             <Link
               href="/reservaciones"
               className="apple-button-accent flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-xs tracking-wide shadow-md active:scale-95 transition-all"
@@ -221,28 +321,62 @@ export default function Navbar() {
 
           <div className="pt-3 border-t border-stone-200 dark:border-white/[0.08] flex flex-col gap-2">
             {user ? (
-              <div className="flex flex-col gap-2 p-3 rounded-xl bg-stone-100/70 dark:bg-white/[0.03] border border-stone-200 dark:border-white/[0.06]">
+              <div className="flex flex-col gap-2.5 p-3 rounded-2xl bg-stone-100/70 dark:bg-white/[0.03] border border-stone-200 dark:border-white/[0.06]">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-stone-800 dark:text-stone-200">
-                    <User className="w-4 h-4 text-orange-600 dark:text-amber-400" />
-                    <span className="font-medium truncate max-w-[180px]">{user.email}</span>
+                  <div className="flex items-center gap-2.5">
+                    {user.user_metadata?.avatar_url ? (
+                      <Image
+                        src={user.user_metadata.avatar_url}
+                        alt="Avatar"
+                        width={28}
+                        height={28}
+                        className="rounded-full ring-1 ring-orange-500"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center text-white text-xs font-bold">
+                        {(user.user_metadata?.full_name || user.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-xs text-stone-900 dark:text-white truncate max-w-[170px]">
+                        {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                      </p>
+                      <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate max-w-[170px]">
+                        {user.email}
+                      </p>
+                    </div>
                   </div>
                   <Link
                     href="/auth/signout"
-                    className="text-xs text-rose-500 font-semibold px-2 py-1"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-xs text-rose-500 font-semibold p-1 hover:underline"
+                    title="Cerrar sesión"
                   >
                     Salir
                   </Link>
                 </div>
-                {isStaff && (
+
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200 dark:border-white/[0.06]">
+                  {isStaff && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 py-2 px-3 rounded-xl bg-orange-500/15 text-orange-700 dark:text-orange-400 font-bold text-xs"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Panel de Administración (Staff)</span>
+                    </Link>
+                  )}
+
                   <Link
-                    href="/admin"
+                    href="/mis-reservas"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-center py-1.5 px-3 rounded-lg bg-orange-500/15 text-orange-700 dark:text-orange-400 font-bold text-xs"
+                    className="flex items-center gap-2 py-2 px-3 rounded-xl text-stone-800 dark:text-stone-200 hover:bg-stone-200/50 dark:hover:bg-white/[0.06] text-xs font-medium"
                   >
-                    Panel Administrativo (Staff)
+                    <FileText className="w-4 h-4 text-orange-600 dark:text-amber-400" />
+                    <span>Mis Reservas</span>
                   </Link>
-                )}
+                </div>
               </div>
             ) : (
               <Link
@@ -251,14 +385,14 @@ export default function Navbar() {
                 className="apple-pill-btn flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-stone-800 dark:text-stone-200 text-xs font-semibold"
               >
                 <User className="w-4 h-4 text-orange-600 dark:text-amber-400" />
-                <span>Ingresar / Registrarse</span>
+                <span>Ingresar / Mi Cuenta</span>
               </Link>
             )}
 
             <Link
               href="/reservaciones"
               onClick={() => setMobileMenuOpen(false)}
-              className="apple-button-accent flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-xs tracking-wide"
+              className="apple-button-accent flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-xs tracking-wide shadow-md"
             >
               <CalendarDays className="w-4 h-4" />
               <span>Reservar Habitación</span>
