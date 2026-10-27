@@ -35,6 +35,7 @@ export default function QuickBookingBar() {
 
   return (
     <form
+      id="tour-booking-bar"
       onSubmit={handleSearch}
       className="w-full max-w-5xl mx-auto apple-glass rounded-[28px] p-4 sm:p-5 border border-white/[0.12] shadow-2xl"
     >

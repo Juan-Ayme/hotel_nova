@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import ThemeToggle from '@/components/public/ThemeToggle';
-import GuestTutorialModal from '@/components/public/GuestTutorialModal';
+import InteractiveTourGuide from '@/components/public/InteractiveTourGuide';
 
 // Enlaces públicos oficiales (Mis Reservas se traslada al menú privado de usuario)
 const NAV_LINKS = [
@@ -43,13 +43,13 @@ export default function Navbar() {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Auto-mostrar mini tutorial a usuarios que visitan por primera vez
+  // Auto-mostrar tour interactivo guiado con burbujas a visitantes por primera vez
   useEffect(() => {
-    const seen = localStorage.getItem('novainn_guest_tutorial_seen');
+    const seen = localStorage.getItem('novainn_interactive_tour_seen');
     if (!seen) {
       const timer = setTimeout(() => {
         setTutorialOpen(true);
-      }, 1200);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -146,10 +146,12 @@ export default function Navbar() {
             <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-stone-200/50 dark:bg-white/[0.04] border border-stone-300/40 dark:border-white/[0.06]">
               {NAV_LINKS.map((link) => {
                 const isActive = pathname === link.href;
+                const isHabitaciones = link.href === '/habitaciones';
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
+                    id={isHabitaciones ? 'tour-nav-habitaciones' : undefined}
                     className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                       isActive
                         ? 'text-stone-900 dark:text-white bg-white dark:bg-white/10 font-bold shadow-sm'
@@ -164,15 +166,15 @@ export default function Navbar() {
 
             {/* Acciones de la Derecha */}
             <div className="hidden sm:flex items-center gap-2.5">
-              {/* Botón Mini Guía / Tutorial Rápido */}
+              {/* Botón Tour Interactivo Guiado con Burbujas */}
               <button
                 type="button"
                 onClick={() => setTutorialOpen(true)}
                 className="apple-pill-btn hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-stone-700 dark:text-stone-300 hover:text-orange-600 dark:hover:text-white transition-all cursor-pointer"
-                title="Ver mini tutorial de cómo reservar"
+                title="Ver tour interactivo por la plataforma"
               >
                 <HelpCircle className="w-3.5 h-3.5 text-orange-600 dark:text-amber-400" />
-                <span>¿Cómo reservar?</span>
+                <span>Tour guiado</span>
               </button>
 
               {/* Conmutador de Modo Oscuro / Modo Claro */}
@@ -180,7 +182,7 @@ export default function Navbar() {
 
               {/* Usuario Autenticado con Dropdown Popover */}
               {user ? (
-                <div className="relative" ref={userMenuRef}>
+                <div className="relative" ref={userMenuRef} id="tour-user-menu">
                   <button
                     type="button"
                     onClick={() => setUserMenuOpen((prev) => !prev)}
@@ -297,6 +299,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
+                  id="tour-user-menu"
                   className="apple-pill-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-stone-700 dark:text-stone-200 hover:text-stone-900 dark:hover:text-white transition-all"
                 >
                   <User className="w-3.5 h-3.5 text-orange-600 dark:text-amber-400" />
@@ -307,6 +310,7 @@ export default function Navbar() {
               {/* Botón de Acción Principal */}
               <Link
                 href="/reservaciones"
+                id="tour-nav-reservar"
                 className="apple-button-accent flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-xs tracking-wide shadow-md active:scale-95 transition-all"
               >
                 <CalendarDays className="w-3.5 h-3.5" />
@@ -319,12 +323,14 @@ export default function Navbar() {
               <ThemeToggle />
               <Link
                 href="/reservaciones"
+                id="tour-mobile-reservar"
                 className="apple-button-accent px-3 py-1.5 rounded-full font-semibold text-xs"
               >
                 Reservar
               </Link>
               <button
                 type="button"
+                id="tour-mobile-menu-btn"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-full text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-200/50 dark:hover:bg-white/[0.08] cursor-pointer"
                 aria-label="Abrir menú"
@@ -345,6 +351,7 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    id={link.href === '/habitaciones' ? 'tour-mobile-habitaciones' : undefined}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       isActive
@@ -454,8 +461,8 @@ export default function Navbar() {
         )}
       </header>
 
-      {/* Mini Tutorial para Huéspedes */}
-      <GuestTutorialModal
+      {/* Tour Guiado Interactivo con Burbujas Apuntando a Componentes Clave */}
+      <InteractiveTourGuide
         isOpen={tutorialOpen}
         onClose={() => setTutorialOpen(false)}
       />
