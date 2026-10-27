@@ -28,43 +28,39 @@ const TOUR_STEPS: TourStep[] = [
   {
     targetId: 'tour-nav-habitaciones',
     mobileTargetId: 'tour-mobile-habitaciones',
-    title: 'Catálogo de Habitaciones',
-    subtitle: 'Fotos reales, precios y detalles',
-    description:
-      'Explora nuestras 4 categorías de habitación (Simple, Matrimonial, Doble y Familiar). Puedes ver fotos reales, servicios incluidos (Wi-Fi 5G, Smart TV, baño privado) y tarifas oficiales en Soles.',
-    tip: 'Haz clic en cualquier habitación para ver su galería completa y amenidades.',
+    title: 'Habitaciones',
+    subtitle: 'Fotos y tarifas oficiales',
+    description: 'Explora nuestros cuartos, fotos reales y precios en Soles.',
+    tip: 'Toca una habitación para ver sus fotos y detalles.',
     icon: BedDouble,
     placementPreference: 'bottom',
   },
   {
     targetId: 'tour-nav-reservar',
     mobileTargetId: 'tour-mobile-reservar',
-    title: 'Motor de Reservaciones',
-    subtitle: 'Bloqueo temporal de 15 minutos',
-    description:
-      'Al presionar "Reservar", inicias el proceso directo en 3 pasos. Tu habitación seleccionada queda bloqueada por 15 minutos para que nadie te la gane mientras realizas tu pago seguro.',
-    tip: 'Aceptamos transferencias, Yape, Plin y bancos (BCP, BBVA) sin recargo.',
+    title: 'Reservas en Línea',
+    subtitle: 'Bloqueo de 15 min',
+    description: 'Tu habitación queda apartada 15 minutos mientras pagas de forma segura.',
+    tip: 'Aceptamos Yape, Plin y transferencias bancarias.',
     icon: CalendarDays,
     placementPreference: 'bottom',
   },
   {
     targetId: 'tour-user-menu',
     mobileTargetId: 'tour-mobile-menu-btn',
-    title: 'Tu Avatar y Menú Personal',
-    subtitle: 'Mis Reservas, Vouchers y Acceso Staff',
-    description:
-      'Haz clic en tu avatar para consultar tus reservas activas y descargar tu comprobante de reserva en PDF. Si eres administrador del hotel, aquí también aparece el acceso directo a tu Panel de Control.',
-    tip: 'Tu sesión guarda tus comprobantes para que los descargues cuando quieras.',
+    title: 'Mis Reservas',
+    subtitle: 'Voucher y PDF',
+    description: 'Consulta tus estadías y descarga tu comprobante en PDF cuando quieras.',
+    tip: 'Accede al instante con tu cuenta de Google.',
     icon: User,
     placementPreference: 'bottom',
   },
   {
     targetId: 'tour-booking-bar',
-    title: 'Buscador de Disponibilidad',
-    subtitle: 'Elige tus fechas de estadía',
-    description:
-      '¿Cuándo te hospedas? Ingresa tu fecha de llegada (Check-in 14:00) y de salida (Check-out 12:00) junto con la cantidad de personas. El sistema te mostrará cuartos libres y el total exacto en tiempo real.',
-    tip: 'Check-in: desde las 14:00 hrs | Check-out: hasta las 12:00 hrs.',
+    title: 'Buscar Fechas',
+    subtitle: 'Precios en tiempo real',
+    description: 'Elige tu llegada y salida para ver cuartos libres y el total exacto.',
+    tip: 'Check-in: 14:00 • Check-out: 12:00.',
     icon: Search,
     placementPreference: 'top',
   },
@@ -156,7 +152,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const bubbleWidth = Math.min(380, windowWidth - 32);
-    const bubbleEstimatedHeight = 280;
+    const bubbleEstimatedHeight = 200;
     const padding = 14;
 
     // Decidir si colocar la burbuja ARRIBA o ABAJO del elemento
@@ -367,7 +363,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         aria-labelledby="tour-bubble-title"
       >
         {/* Contenedor tipo Globo de Cómic / Burbuja de Apple */}
-        <div className="relative bg-stone-900/95 dark:bg-stone-950/95 border-2 border-orange-500/50 backdrop-blur-2xl text-stone-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4">
+        <div className="relative bg-stone-900/95 dark:bg-stone-950/95 border-2 border-orange-500/50 backdrop-blur-2xl text-stone-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] p-4 sm:p-4.5 flex flex-col gap-3">
           {/* FLECHA / PUNTERO DE LA BURBUJA */}
           {isElementVisible && (
             <>
@@ -416,7 +412,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           )}
 
           {/* Cabecera de la burbuja: Badge de Paso + Botón Saltar */}
-          <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+          <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/35 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
@@ -438,33 +434,35 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           </div>
 
           {/* Cuerpo de la burbuja: Ícono + Título + Descripción */}
-          <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-600 to-amber-500 p-0.5 shadow-md shadow-orange-600/30 shrink-0 mt-0.5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-600 to-amber-500 p-0.5 shadow-md shadow-orange-600/30 shrink-0 mt-0.5">
               <div className="w-full h-full bg-stone-900 rounded-[14px] flex items-center justify-center">
                 <StepIcon className="w-5 h-5 text-amber-400" />
               </div>
             </div>
 
-            <div className="space-y-1 flex-1 min-w-0">
-              <h4
-                id="tour-bubble-title"
-                className="text-sm font-bold text-white tracking-tight leading-snug"
-              >
-                {step.title}
-              </h4>
-              <p className="text-[11px] font-medium text-orange-400/90 leading-tight">
-                {step.subtitle}
-              </p>
-              <p className="text-xs text-stone-300 leading-relaxed pt-1 font-normal">
+            <div className="space-y-0.5 flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <h4
+                  id="tour-bubble-title"
+                  className="text-sm font-bold text-white tracking-tight leading-snug"
+                >
+                  {step.title}
+                </h4>
+                <span className="text-[10px] font-medium text-orange-400/90 shrink-0">
+                  {step.subtitle}
+                </span>
+              </div>
+              <p className="text-xs text-stone-300 leading-relaxed font-normal pt-0.5">
                 {step.description}
               </p>
             </div>
           </div>
 
           {/* Micro-tip práctico */}
-          <div className="px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-200/90 flex items-start gap-2">
+          <div className="px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-200/90 flex items-center gap-2">
             <span className="font-bold text-orange-400 shrink-0">💡 Tip:</span>
-            <span>{step.tip}</span>
+            <span className="leading-tight truncate">{step.tip}</span>
           </div>
 
           {/* Barra inferior: Indicadores de puntos + Botones Anterior / Siguiente */}

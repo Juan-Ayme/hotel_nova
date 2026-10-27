@@ -1,26 +1,31 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Reservation, ReservationStatus } from '@/types/hotel.types';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDisplayDate } from '@/lib/utils/dates';
-import EmailAuthForm from '@/components/auth/EmailAuthForm';
 import {
   Search,
-  KeyRound,
   FileText,
   Clock,
   CheckCircle2,
   XCircle,
   Download,
   ShieldAlert,
+  BedDouble,
+  RefreshCw,
+  ArrowRight,
 } from 'lucide-react';
+import Link from 'next/link';
 import { generateReservationPDF } from '@/lib/utils/pdf-generator';
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
-  const configs: Record<ReservationStatus, { label: string; bg: string; text: string; icon: typeof CheckCircle2 }> = {
+  const configs: Record<
+    ReservationStatus,
+    { label: string; bg: string; text: string; icon: typeof CheckCircle2 }
+  > = {
     pendiente_pago: {
       label: 'Pendiente de Pago',
       bg: 'bg-amber-500/15 border-amber-500/30',
@@ -68,103 +73,141 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 function MisReservasContent() {
   const searchParams = useSearchParams();
+  const urlCode = searchParams.get('codigo') || searchParams.get('code');
   const alerta = searchParams.get('alerta');
 
-  const [activeTab, setActiveTab] = useState<'google' | 'codigo'>('codigo');
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  // Formulario por Código + DNI
-  const [resCode, setResCode] = useState('');
-  const [docOrEmail, setDocOrEmail] = useState('');
-  const [searchedReservations, setSearchedReservations] = useState<Reservation[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Detectar sesión de Google o Correo y suscribirse a cambios
+  // Función unificada para cargar reservas
+  const loadReservations = useCallback(
+    async (codeToSearch?: string | null, emailToSearch?: string | null) => {
+      try {
+        setIsLoading(true);
+        setSearchError(null);
+
+        // 1. Si hay código específico
+        if (codeToSearch && codeToSearch.trim().length > 0) {
+          const res = await fetch(`/api/guest/reservations?codigo=${encodeURIComponent(codeToSearch.trim().toUpperCase())}`);
+          const json = await res.json();
+          if (json.reservations && json.reservations.length > 0) {
+            setReservations(json.reservations);
+            return;
+          }
+        }
+
+        // 2. Si hay email
+        if (emailToSearch && emailToSearch.trim().length > 0) {
+          const res = await fetch(`/api/guest/reservations?email=${encodeURIComponent(emailToSearch.trim().toLowerCase())}`);
+          const json = await res.json();
+          if (json.reservations && json.reservations.length > 0) {
+            setReservations(json.reservations);
+            return;
+          }
+        }
+
+        // 3. Fallback: verificar sesión activa de Supabase
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user?.email) {
+          const res = await fetch(`/api/guest/reservations?email=${encodeURIComponent(user.email)}`);
+          const json = await res.json();
+          if (json.reservations && json.reservations.length > 0) {
+            setReservations(json.reservations);
+            return;
+          }
+        }
+
+        // 4. Fallback: revisar códigos guardados en localStorage
+        try {
+          const lastCode = localStorage.getItem('novainn_last_reservation_code');
+          if (lastCode && lastCode !== codeToSearch) {
+            const res = await fetch(`/api/guest/reservations?codigo=${encodeURIComponent(lastCode)}`);
+            const json = await res.json();
+            if (json.reservations && json.reservations.length > 0) {
+              setReservations(json.reservations);
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      } catch (err) {
+        console.error('Error al cargar reservas:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  // Cargar automáticamente al entrar
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
-        setUserEmail(data.user.email);
-        setActiveTab('google');
-        fetchReservationsByEmail(data.user.email);
-      }
-    });
+    let initialCode = urlCode;
+    let initialEmail: string | null = null;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
-        setActiveTab('google');
-        fetchReservationsByEmail(session.user.email);
-      } else {
-        setUserEmail(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const fetchReservationsByEmail = async (email: string) => {
     try {
-      setIsSearching(true);
-      setSearchError(null);
-      const res = await fetch(`/api/guest/reservations?email=${encodeURIComponent(email)}`);
-      const json = await res.json();
-
-      if (!res.ok) {
-        throw new Error(json.error || 'Error al obtener reservas');
+      if (!initialCode) {
+        initialCode = localStorage.getItem('novainn_last_reservation_code');
       }
-
-      setSearchedReservations(json.reservations || []);
-    } catch (err: unknown) {
-      console.error('Error al consultar reservas por email:', err);
-      setSearchError(err instanceof Error ? err.message : 'Error al consultar reservas');
-    } finally {
-      setIsSearching(false);
+      initialEmail = localStorage.getItem('novainn_guest_email');
+    } catch {
+      // ignore
     }
-  };
 
-  const handleSearchByCode = async (e: React.FormEvent) => {
+    if (initialCode) {
+      setSearchInput(initialCode);
+    }
+
+    loadReservations(initialCode, initialEmail);
+  }, [urlCode, loadReservations]);
+
+  // Manejador del buscador manual
+  const handleManualSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resCode.trim() || !docOrEmail.trim()) {
-      setSearchError('Por favor ingresa tu Código de Reserva y tu DNI o Correo.');
-      return;
-    }
+    if (!searchInput.trim()) return;
+
+    setIsLoading(true);
+    setSearchError(null);
+
+    const term = searchInput.trim();
 
     try {
-      setIsSearching(true);
-      setSearchError(null);
-
-      const res = await fetch('/api/guest/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reservationCode: resCode.trim().toUpperCase(),
-          docOrEmail: docOrEmail.trim(),
-        }),
-      });
-
+      // Intentar primero como código de reserva
+      const res = await fetch(`/api/guest/reservations?codigo=${encodeURIComponent(term.toUpperCase())}`);
       const json = await res.json();
 
-      if (!res.ok) {
-        setSearchError(json.error || 'No se encontró ninguna reserva.');
-        setSearchedReservations([]);
+      if (json.reservations && json.reservations.length > 0) {
+        setReservations(json.reservations);
         return;
       }
 
-      setSearchedReservations(json.reservations || []);
-    } catch (err: unknown) {
-      console.error('Error en búsqueda:', err);
-      setSearchError('Ocurrió un error al consultar la base de datos.');
+      // Si no encontró por código, intentar como email
+      if (term.includes('@')) {
+        const resEmail = await fetch(`/api/guest/reservations?email=${encodeURIComponent(term.toLowerCase())}`);
+        const jsonEmail = await resEmail.json();
+        if (jsonEmail.reservations && jsonEmail.reservations.length > 0) {
+          setReservations(jsonEmail.reservations);
+          return;
+        }
+      }
+
+      setSearchError(`No se encontró ninguna reserva para "${term}". Verifica tu código.`);
+    } catch (err) {
+      console.error('Error en búsqueda manual:', err);
+      setSearchError('Error de conexión al consultar reserva.');
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {alerta === 'acceso_restringido_personal' && (
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 shrink-0 text-amber-400" />
@@ -174,173 +217,116 @@ function MisReservasContent() {
         </div>
       )}
 
-      {/* Selector de Modalidad - iOS Segmented Control */}
-      <div className="p-1 rounded-2xl bg-black/40 border border-white/[0.08] grid grid-cols-2 gap-1 backdrop-blur-md">
-        <button
-          type="button"
-          onClick={() => setActiveTab('codigo')}
-          className={`py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'codigo'
-              ? 'apple-button-accent text-white shadow-lg scale-[1.01]'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Código + Documento (Doble Factor)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('google')}
-          className={`py-3 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'google'
-              ? 'apple-button-accent text-white shadow-lg scale-[1.01]'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          Acceso por Correo
-        </button>
+      {/* Barra de Búsqueda Rápida (Directa, sin opciones ni pestañas) */}
+      <div className="apple-glass-card rounded-[26px] p-4 sm:p-5 border border-white/[0.08] shadow-xl">
+        <form onSubmit={handleManualSearch} className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar por código de reserva (ej. NOVA-2026-XXXX) o correo..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="apple-button-accent w-full sm:w-auto px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95 transition-all"
+          >
+            {isLoading ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+            <span>Buscar</span>
+          </button>
+        </form>
+
+        {searchError && (
+          <p className="text-xs text-rose-400 mt-3 font-medium px-2">
+            {searchError}
+          </p>
+        )}
       </div>
 
-      {/* Modalidad 1: Código + DNI */}
-      {activeTab === 'codigo' && (
-        <div className="apple-glass-card rounded-[32px] p-6 sm:p-8 border border-white/[0.08] shadow-2xl relative overflow-hidden">
-          {/* macOS window dots */}
-          <div className="flex items-center gap-2 pb-4 border-b border-white/[0.06] mb-5">
-            <span className="macos-dot macos-dot-red" />
-            <span className="macos-dot macos-dot-yellow" />
-            <span className="macos-dot macos-dot-green" />
-            <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider ml-2">
-              Búsqueda de Reserva
-            </span>
-          </div>
-
-          <h2 className="text-xl font-bold text-white mb-1.5">
-            Consulta con tu Código de Reserva
-          </h2>
-          <p className="text-xs text-slate-400 mb-6">
-            Ingresa el código oficial (ej. <code className="text-blue-400 font-mono">NOVA-2026-XXXX</code>) y tu documento o correo registrado.
-          </p>
-
-          <form onSubmit={handleSearchByCode} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
-                Código de Reserva *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="NOVA-2026-XXXX"
-                value={resCode}
-                onChange={(e) => setResCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm font-mono uppercase text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
-                DNI o Correo Electrónico *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="DNI de 8 dígitos o correo"
-                value={docOrEmail}
-                onChange={(e) => setDocOrEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              {searchError && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
-                  {searchError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSearching}
-                className="apple-button-accent w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
-              >
-                <Search className="w-4 h-4" />
-                <span>{isSearching ? 'Buscando reserva...' : 'Buscar Reserva'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Modalidad 2: Acceso por Correo */}
-      {activeTab === 'google' && (
-        <div className="apple-glass-card rounded-[32px] p-6 sm:p-8 border border-white/[0.08] shadow-2xl text-center">
-          {userEmail ? (
-            <div className="space-y-4">
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">
-                Sesión Activa
-              </span>
-              <h3 className="text-xl font-bold text-white font-mono">
-                {userEmail}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Mostrando las reservas asociadas a tu correo electrónico.
-              </p>
-              <button
-                type="button"
-                onClick={() => fetchReservationsByEmail(userEmail)}
-                className="apple-pill-btn px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer"
-              >
-                Actualizar Lista
-              </button>
-            </div>
-          ) : (
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
-                <KeyRound className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">
-                Acceso Rápido por Correo
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Ingresa con tu correo institucional o personal para visualizar todo tu historial de estadías.
-              </p>
-              <EmailAuthForm nextUrl="/mis-reservas" />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Resultados de Reservas Encontradas */}
+      {/* Lista Directa de Reservas y sus Estados */}
       <div className="space-y-4">
-        <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-          <span>Reservas Encontradas</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-mono">
-            {searchedReservations.length}
-          </span>
-        </h3>
+        <div className="flex items-center justify-between pb-1">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <span>Tus Reservas</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-mono font-bold">
+              {reservations.length}
+            </span>
+          </h2>
 
-        {searchedReservations.length === 0 ? (
-          <div className="apple-glass-card rounded-[28px] p-10 border border-white/[0.08] text-center text-slate-400 text-xs">
-            No hay reservas para mostrar. Utiliza el formulario superior para consultar tu estadía.
+          <button
+            type="button"
+            onClick={() => loadReservations(searchInput, null)}
+            className="apple-pill-btn px-3 py-1.5 rounded-xl text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Refrescar estados"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-blue-400' : ''}`} />
+            <span className="hidden sm:inline">Actualizar</span>
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="apple-glass-card rounded-[28px] p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
+            <span>Consultando tus reservas en la base de datos...</span>
+          </div>
+        ) : reservations.length === 0 ? (
+          <div className="apple-glass-card rounded-[28px] p-10 border border-white/[0.08] text-center space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-slate-400 flex items-center justify-center mx-auto">
+              <BedDouble className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">
+                No hay reservas encontradas
+              </h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 leading-relaxed">
+                Si acabas de registrar una reserva, escribe tu código arriba para ver su estado actual o explora nuestras habitaciones disponibles.
+              </p>
+            </div>
+            <Link
+              href="/reservaciones"
+              className="inline-flex items-center gap-2 apple-button-accent px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+            >
+              <span>Nueva Reserva</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         ) : (
-          searchedReservations.map((res) => (
+          reservations.map((res) => (
             <div
               key={res.id}
-              className="apple-glass-card rounded-[28px] p-6 sm:p-7 border border-white/[0.08] shadow-xl space-y-4"
+              className="apple-glass-card rounded-[28px] p-6 sm:p-7 border border-white/[0.08] shadow-2xl space-y-4"
             >
+              {/* Encabezado: Código Oficial + Estado */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">
-                    Código Oficial
+                    Código de Reserva
                   </span>
                   <span className="font-mono text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-amber-300">
                     {res.reservation_code}
                   </span>
+                  {res.guests?.full_name && (
+                    <span className="text-xs text-slate-400 block mt-0.5">
+                      Titular: <strong className="text-slate-200">{res.guests.full_name}</strong>
+                    </span>
+                  )}
                 </div>
+
                 <div>
                   <StatusBadge status={res.status} />
                 </div>
               </div>
 
-              {/* Datos de la estancia */}
+              {/* Datos de la Estadía */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
                   <span className="text-slate-400 block text-[11px]">Check-in</span>
@@ -368,7 +354,7 @@ function MisReservasContent() {
                 </div>
               </div>
 
-              {/* Botones para descargar PDF / imprimir */}
+              {/* Botones de Acción: Descargar Voucher PDF + Imprimir */}
               <div className="pt-3 border-t border-white/[0.06] flex flex-wrap justify-end gap-2.5">
                 <button
                   type="button"
@@ -378,6 +364,7 @@ function MisReservasContent() {
                   <Download className="w-3.5 h-3.5" />
                   <span>Descargar Voucher PDF</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -398,13 +385,12 @@ function MisReservasContent() {
 export default function MisReservasPage() {
   return (
     <div className="min-h-screen pb-24">
-      <section className="relative pt-24 pb-16 text-white text-center px-4 overflow-hidden">
-
+      <section className="relative pt-24 pb-12 text-white text-center px-4 overflow-hidden">
         <h1 className="text-4xl sm:text-6xl font-black mt-1 tracking-tight">
           Mis Reservas
         </h1>
         <p className="mt-3 text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-          Consulta el estado de tu pago, descarga tu comprobante oficial en PDF o revisa los detalles de tu estadía.
+          Revisa el estado de tu hospedaje y descarga tu comprobante oficial en PDF.
         </p>
       </section>
 

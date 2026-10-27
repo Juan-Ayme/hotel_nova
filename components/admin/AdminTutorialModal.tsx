@@ -23,43 +23,39 @@ interface AdminTutorialModalProps {
 const ADMIN_STEPS = [
   {
     stepNumber: '1',
-    title: 'Control de Llegadas y Nueva Reserva',
-    subtitle: 'Dashboard Operativo de Recepción',
-    description:
-      'En el Dashboard principal supervisas los Check-ins y Check-outs programados para la fecha. Puedes usar el botón "+ Nueva Reserva" para registrar huéspedes presenciales (Walk-In) o llamadas telefónicas en menos de 1 minuto.',
+    title: 'Recepción y Walk-In',
+    subtitle: 'Llegadas y salidas del día',
+    description: 'Supervisa check-ins y registra reservas presenciales o telefónicas en 1 minuto.',
     icon: LayoutDashboard,
     badge: 'Módulo 1 de 4',
-    tip: 'Las reservas Walk-In bloquean inmediatamente la habitación y actualizan el calendario en tiempo real.',
+    tip: 'Las reservas presenciales bloquean cuartos al instante.',
   },
   {
     stepNumber: '2',
-    title: 'Verificación de Pagos Yape y Plin',
-    subtitle: 'Aprobación o Rechazo con 1 Clic',
-    description:
-      'En la sección "Verificar Pagos", verás cada pago enviado por la web con su número de operación y comprobante opcional. Al hacer clic en "Aprobar", la reserva se confirma automáticamente y se genera su voucher oficial.',
+    title: 'Verificar Pagos',
+    subtitle: 'Yape, Plin y bancos',
+    description: 'Revisa las operaciones enviadas por la web y aprueba o rechaza con 1 clic.',
     icon: CreditCard,
     badge: 'Módulo 2 de 4',
-    tip: 'Si el cliente se equivocó en el monto o número de operación, puedes rechazar el pago ingresando el motivo.',
+    tip: 'Al aprobar, se confirma la reserva y genera el voucher.',
   },
   {
     stepNumber: '3',
-    title: 'Gestión de Limpieza y Habitaciones',
-    subtitle: 'Housekeeping y Disponibilidad Web',
-    description:
-      'En "Habitaciones & Limpieza", actualiza el estado físico de los 7 dormitorios (Limpia, Sucia o Mantenimiento). Solo las habitaciones marcadas como "Limpia" quedan habilitadas para su venta automática en la web.',
+    title: 'Limpieza y Cuartos',
+    subtitle: 'Housekeeping en tiempo real',
+    description: 'Cambia el estado de habitaciones a limpia, sucia o mantenimiento.',
     icon: BedDouble,
     badge: 'Módulo 3 de 4',
-    tip: 'Cuando un huésped realiza el Check-out, la habitación cambia automáticamente a estado "Sucia" para el equipo de aseo.',
+    tip: 'Solo los cuartos limpios se habilitan en la web.',
   },
   {
     stepNumber: '4',
-    title: 'Reportes y Exportación Contable',
-    subtitle: 'Balance de Ingresos y Auditoría',
-    description:
-      'En "Reportes & Auditoría", visualiza los ingresos consolidados por canal de pago (Yape, Plin, Transferencias y Tarjetas). Puedes descargar el reporte financiero completo en formato Excel (.xlsx) con un solo clic.',
+    title: 'Reportes y Excel',
+    subtitle: 'Balance y exportación',
+    description: 'Revisa ingresos por método de pago y descarga el balance en Excel (.xlsx).',
     icon: FileSpreadsheet,
     badge: 'Módulo 4 de 4',
-    tip: 'Cada acción del personal queda registrada con fecha, hora y usuario en la bitácora inalterable.',
+    tip: 'Toda acción del personal queda registrada en auditoría.',
   },
 ];
 

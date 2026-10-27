@@ -17,7 +17,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import Image from 'next/image';
-import AdminTutorialModal from '@/components/admin/AdminTutorialModal';
+import AdminInteractiveTourGuide from '@/components/admin/AdminInteractiveTourGuide';
 
 interface AdminSidebarProps {
   userEmail: string;
@@ -37,7 +37,7 @@ export default function AdminSidebar({
 
   // Auto-mostrar mini tutorial al personal la primera vez que entra
   useEffect(() => {
-    const seen = localStorage.getItem('novainn_admin_tutorial_seen');
+    const seen = localStorage.getItem('novainn_admin_interactive_tour_seen');
     if (!seen) {
       const timer = setTimeout(() => {
         setAdminTutorialOpen(true);
@@ -52,30 +52,35 @@ export default function AdminSidebar({
       label: 'Dashboard Recepción',
       icon: LayoutDashboard,
       adminOnly: false,
+      tourId: 'admin-tour-nav-dashboard',
     },
     {
       href: '/admin/reservas',
       label: 'Gestión de Reservas',
       icon: CalendarDays,
       adminOnly: false,
+      tourId: 'admin-tour-nav-reservas',
     },
     {
       href: '/admin/pagos',
       label: 'Verificar Pagos (Yape/Plin)',
       icon: CreditCard,
       adminOnly: false,
+      tourId: 'admin-tour-nav-pagos',
     },
     {
       href: '/admin/habitaciones',
       label: 'Habitaciones & Limpieza',
       icon: BedDouble,
       adminOnly: true,
+      tourId: 'admin-tour-nav-habitaciones',
     },
     {
       href: '/admin/reportes',
       label: 'Reportes & Auditoría',
       icon: FileSpreadsheet,
       adminOnly: true,
+      tourId: 'admin-tour-nav-reportes',
     },
   ];
 
@@ -150,6 +155,7 @@ export default function AdminSidebar({
               return (
                 <Link
                   key={item.href}
+                  id={item.tourId}
                   href={item.href}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
                     isActive
@@ -197,8 +203,8 @@ export default function AdminSidebar({
         </div>
       </aside>
 
-      {/* Modal de Tutorial Rápido para Administración */}
-      <AdminTutorialModal
+      {/* Guía Interactiva con Burbujas para Administración */}
+      <AdminInteractiveTourGuide
         isOpen={adminTutorialOpen}
         onClose={() => setAdminTutorialOpen(false)}
       />

@@ -4,29 +4,47 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
-// 1. OBTENER RESERVAS DEL USUARIO AUTENTICADO
+// 1. OBTENER RESERVAS DEL USUARIO AUTENTICADO O POR CÓDIGO
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const queryCode = searchParams.get('codigo') || searchParams.get('code');
+    const queryEmail = searchParams.get('email');
+
+    const admin = createAdminClient();
+
+    // Si viene un código de reserva directo
+    if (queryCode && queryCode.trim().length > 0) {
+      const { data: resByCode, error: codeError } = await admin
+        .from('reservations')
+        .select(`
+          *,
+          guests (*),
+          reservation_rooms (
+            *,
+            room_types (*)
+          ),
+          payments (*)
+        `)
+        .eq('reservation_code', queryCode.trim().toUpperCase())
+        .order('created_at', { ascending: false });
+
+      if (!codeError && resByCode && resByCode.length > 0) {
+        return NextResponse.json({ reservations: resByCode });
+      }
+    }
+
     const supabaseUser = await createServerSupabaseClient();
     const {
       data: { user },
-      error: authError,
     } = await supabaseUser.auth.getUser();
-
-    // Fallback: verificar si viene el email por query param en caso de llamada desde cliente
-    const { searchParams } = new URL(request.url);
-    const queryEmail = searchParams.get('email');
 
     const effectiveEmail = user?.email || (queryEmail ? queryEmail.trim().toLowerCase() : null);
 
     if (!effectiveEmail) {
-      return NextResponse.json(
-        { error: 'No se ha detectado una sesión activa ni un correo válido.' },
-        { status: 401 }
-      );
+      // Si no hay email ni código, devolver lista vacía en lugar de 401 para permitir renderizado limpio
+      return NextResponse.json({ reservations: [] });
     }
-
-    const admin = createAdminClient();
 
     // 1. Buscar los guest_id asociados al correo o auth_user_id
     const { data: guests, error: guestError } = await admin

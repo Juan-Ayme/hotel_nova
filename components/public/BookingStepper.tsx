@@ -246,13 +246,13 @@ export default function BookingStepper() {
         p_coupon_code: couponCode || null,
       });
 
+      const fallbackCode = `NOVA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
       if (error) {
         console.warn('Nota: RPC error (usando fallback controlado para desarrollo local):', error);
-        // Fallback local seguro
-        const fakeCode = `NOVA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         setReservationResult({
           reservationId: 'res-local-temp',
-          reservationCode: fakeCode,
+          reservationCode: fallbackCode,
           totalAmount: totalConDescuento,
           expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         });
@@ -263,6 +263,23 @@ export default function BookingStepper() {
           totalAmount: data.total_amount_pen,
           expiresAt: data.expires_at,
         });
+      }
+
+      // Guardar automáticamente para consultar en Mis Reservas sin tener que volver a digitar
+      try {
+        const activeCode = error ? fallbackCode : (data?.reservation_code || fallbackCode);
+        if (activeCode) {
+          localStorage.setItem('novainn_last_reservation_code', activeCode);
+          localStorage.setItem('novainn_guest_email', email);
+          const raw = localStorage.getItem('novainn_saved_codes');
+          const list: string[] = raw ? JSON.parse(raw) : [];
+          if (!list.includes(activeCode)) {
+            list.unshift(activeCode);
+            localStorage.setItem('novainn_saved_codes', JSON.stringify(list));
+          }
+        }
+      } catch {
+        // ignore
       }
 
       setCurrentStep(3);
@@ -855,7 +872,7 @@ export default function BookingStepper() {
                   <span>Imprimir</span>
                 </button>
                 <Link
-                  href="/mis-reservas"
+                  href={`/mis-reservas?codigo=${reservationResult.reservationCode}`}
                   className="px-6 py-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs uppercase tracking-wider border border-amber-500/30 transition-all flex items-center gap-2"
                 >
                   Ver en Mis Reservas

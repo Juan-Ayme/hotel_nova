@@ -168,6 +168,7 @@ export default function ReceptionDashboardPage() {
           </button>
 
           <button
+            id="admin-tour-nueva-reserva"
             type="button"
             onClick={() => setModalOpen(true)}
             className="apple-button-accent flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs tracking-wide active:scale-95 transition-all cursor-pointer shadow-lg"
@@ -179,7 +180,7 @@ export default function ReceptionDashboardPage() {
       </div>
 
       {/* Tarjetas KPI estilo iOS Control Center */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="admin-tour-kpis" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
@@ -221,7 +222,9 @@ export default function ReceptionDashboardPage() {
       </div>
 
       {/* Calendario de Ocupación en Tiempo Real */}
-      <OccupancyCalendarRealtime key={refreshKey} />
+      <div id="admin-tour-calendar">
+        <OccupancyCalendarRealtime key={refreshKey} />
+      </div>
 
       {/* Modal de Reserva Walk-in */}
       <WalkInBookingModal

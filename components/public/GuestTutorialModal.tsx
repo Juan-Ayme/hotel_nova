@@ -22,33 +22,30 @@ interface GuestTutorialModalProps {
 const STEPS = [
   {
     stepNumber: '1',
-    title: 'Elige tus Fechas y Habitación',
-    subtitle: 'Búsqueda rápida en tiempo real',
-    description:
-      'Ingresa la fecha de llegada (Check-in desde las 14:00) y de salida (Check-out hasta las 12:00). Puedes elegir entre nuestras 4 categorías de habitación con precios transparentes en Soles.',
+    title: 'Fechas y Habitación',
+    subtitle: 'Disponibilidad al instante',
+    description: 'Elige tu fecha de llegada y salida para ver habitaciones libres con precios en Soles.',
     icon: BedDouble,
     badge: 'Paso 1 de 3',
-    tip: 'Tip: Puedes ver fotos detalladas y ficha técnica de cada habitación haciendo clic en el catálogo.',
+    tip: 'Check-in desde las 14:00 • Check-out hasta las 12:00.',
   },
   {
     stepNumber: '2',
-    title: 'Pago Fácil con Yape, Plin o Bancos',
-    subtitle: 'Bloqueo temporal de 15 minutos',
-    description:
-      'Al confirmar tus datos, tu cuarto queda bloqueado para ti por 15 minutos. Realiza el pago por Yape, Plin o transferencia bancaria e ingresa tu número de operación. ¡Subir la foto del voucher es 100% opcional!',
+    title: 'Pago con Yape o Plin',
+    subtitle: 'Apartado por 15 minutos',
+    description: 'Tu habitación queda bloqueada por 15 min. Paga por Yape, Plin o banco e ingresa la operación.',
     icon: QrCode,
     badge: 'Paso 2 de 3',
-    tip: 'Aceptamos Yape, Plin, BCP, BBVA y tarjetas de crédito o débito sin recargos ocultos.',
+    tip: 'Aceptamos transferencias y billeteras sin comisiones.',
   },
   {
     stepNumber: '3',
-    title: 'Voucher Oficial y Gestión de Estadía',
-    subtitle: 'Confirmación inmediata y comprobante PDF',
-    description:
-      'Recibirás tu código de reserva oficial. Podrás descargar tu voucher en PDF con validez formal y revisar el estado de tu pago ingresando a tu cuenta desde el avatar superior.',
+    title: 'Voucher Oficial en PDF',
+    subtitle: 'Comprobante formal',
+    description: 'Descarga tu constancia en PDF al instante y revisa tu reserva cuando quieras.',
     icon: FileText,
     badge: 'Paso 3 de 3',
-    tip: 'Al llegar a recepción solo presenta tu DNI y tu código de reserva para recibir tus llaves.',
+    tip: 'En recepción solo muestra tu DNI y código de reserva.',
   },
 ];
 
