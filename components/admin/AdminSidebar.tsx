@@ -17,6 +17,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 import AdminInteractiveTourGuide from '@/components/admin/AdminInteractiveTourGuide';
 
 interface AdminSidebarProps {
@@ -34,6 +35,19 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const [adminTutorialOpen, setAdminTutorialOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      setIsLoggingOut(true);
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/login?alerta=sesion_cerrada';
+    } catch (err) {
+      console.error('Error cerrando sesión:', err);
+      window.location.href = '/login';
+    }
+  };
 
   // Auto-mostrar mini tutorial al personal la primera vez que entra
   useEffect(() => {
@@ -193,13 +207,15 @@ export default function AdminSidebar({
             <ExternalLink className="w-3 h-3 opacity-60" />
           </Link>
 
-          <Link
-            href="/auth/signout"
-            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/15 text-rose-300 text-xs font-medium transition-colors border border-rose-500/20"
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/15 text-rose-300 text-xs font-medium transition-colors border border-rose-500/20 cursor-pointer disabled:opacity-50"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Cerrar Sesión</span>
-          </Link>
+            <span>{isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
+          </button>
         </div>
       </aside>
 

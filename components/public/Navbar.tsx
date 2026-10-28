@@ -43,6 +43,19 @@ export default function Navbar() {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/login?alerta=sesion_cerrada';
+    } catch (err) {
+      console.error('Error cerrando sesión:', err);
+      window.location.href = '/login';
+    }
+  };
+
   // Auto-mostrar tour interactivo guiado con burbujas a visitantes por primera vez
   useEffect(() => {
     const seen = localStorage.getItem('novainn_interactive_tour_seen');
@@ -284,14 +297,14 @@ export default function Navbar() {
 
                       {/* Salir */}
                       <div className="pt-1 mt-1 border-t border-stone-200/80 dark:border-white/[0.06]">
-                        <Link
-                          href="/auth/signout"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors text-left cursor-pointer"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Cerrar Sesión</span>
-                        </Link>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -405,14 +418,14 @@ export default function Navbar() {
                         </p>
                       </div>
                     </div>
-                    <Link
-                      href="/auth/signout"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-xs text-rose-500 font-semibold p-1 hover:underline"
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="text-xs text-rose-500 font-semibold p-1 hover:underline cursor-pointer"
                       title="Cerrar sesión"
                     >
                       Salir
-                    </Link>
+                    </button>
                   </div>
 
                   <div className="flex flex-col gap-1.5 pt-2 border-t border-stone-200 dark:border-white/[0.06]">

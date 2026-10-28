@@ -14,9 +14,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const { origin } = new URL(request.url);
-  const supabase = await createServerSupabaseClient();
-
-  await supabase.auth.signOut();
-
-  return NextResponse.redirect(`${origin}/login?alerta=sesion_cerrada`);
+  // IMPORTANTE: Nunca cerrar sesión en una petición GET para evitar que
+  // navegadores o Next.js prefetching cierren la sesión automáticamente en segundo plano.
+  return NextResponse.redirect(`${origin}/`);
 }
