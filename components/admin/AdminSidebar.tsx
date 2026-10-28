@@ -86,7 +86,7 @@ export default function AdminSidebar({
 
   return (
     <>
-      <aside className="w-64 bg-slate-950/75 backdrop-blur-3xl text-slate-300 flex flex-col justify-between border-r border-white/[0.08] shrink-0 min-h-screen relative z-30 select-none">
+      <aside className="w-64 bg-slate-950/95 backdrop-blur-3xl text-slate-300 flex flex-col justify-between border-r border-white/10 shrink-0 min-h-screen relative z-30 select-none shadow-2xl">
         <div>
           {/* macOS Window Controls (Traffic Lights) */}
           <div className="flex items-center justify-between px-5 pt-5 pb-2">
@@ -116,7 +116,7 @@ export default function AdminSidebar({
           </div>
 
           {/* Perfil del Trabajador Autenticado estilo Apple ID */}
-          <div className="p-3 mx-3 mt-3 rounded-2xl bg-white/[0.03] border border-white/[0.07] backdrop-blur-xl flex items-center gap-3 shadow-sm">
+          <div className="p-3 mx-3 mt-3 rounded-2xl bg-slate-900/90 border border-white/10 backdrop-blur-xl flex items-center gap-3 shadow-md">
             <div className="relative w-9 h-9 rounded-full overflow-hidden bg-slate-800 shrink-0 ring-1 ring-white/20">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt={fullName} fill className="object-cover" />

@@ -41,7 +41,7 @@ export default function QuickBookingBar() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-center">
         {/* Entrada: Check-in estilo iOS */}
-        <div className="flex flex-col gap-1 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+        <div className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-900/90 border border-white/20 hover:border-white/35 transition-colors shadow-sm">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" />
             <span>Ingreso (Check-in)</span>
@@ -63,7 +63,7 @@ export default function QuickBookingBar() {
         </div>
 
         {/* Salida: Check-out estilo iOS */}
-        <div className="flex flex-col gap-1 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+        <div className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-900/90 border border-white/20 hover:border-white/35 transition-colors shadow-sm">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5" />
             <span>Salida (Check-out)</span>
@@ -80,7 +80,7 @@ export default function QuickBookingBar() {
 
         {/* Huéspedes y Habitaciones estilo iOS */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+          <div className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-900/90 border border-white/20 hover:border-white/35 transition-colors shadow-sm">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1">
               <Users className="w-3 h-3" />
               <span>Huéspedes</span>
@@ -98,7 +98,7 @@ export default function QuickBookingBar() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+          <div className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-900/90 border border-white/20 hover:border-white/35 transition-colors shadow-sm">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1">
               <BedDouble className="w-3 h-3" />
               <span>Habitaciones</span>

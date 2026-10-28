@@ -61,8 +61,13 @@ export default function EmailAuthForm({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // Redirección efectiva
-  const targetDestination = isStaff ? '/admin' : nextUrl;
+  // Redirección efectiva respetando el parámetro next
+  const targetDestination =
+    nextUrl && (nextUrl.startsWith('/admin') || !isStaff)
+      ? nextUrl
+      : isStaff
+        ? '/admin'
+        : '/mis-reservas';
 
   // 1. INICIAR SESIÓN CON CONTRASEÑA (Para los que ya crearon cuenta)
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -85,8 +90,7 @@ export default function EmailAuthForm({
       }
 
       if (data.session) {
-        router.push(targetDestination);
-        router.refresh();
+        window.location.href = targetDestination;
       }
     } catch (err: unknown) {
       console.error('Error al iniciar sesión:', err);
@@ -167,8 +171,7 @@ export default function EmailAuthForm({
       }
 
       if (data.session || data.user) {
-        router.push(targetDestination);
-        router.refresh();
+        window.location.href = targetDestination;
       }
     } catch (err: unknown) {
       console.error('Error al verificar código:', err);
@@ -219,8 +222,7 @@ export default function EmailAuthForm({
 
       // Si la sesión se creó de inmediato sin confirmación previa
       if (data.session) {
-        router.push(targetDestination);
-        router.refresh();
+        window.location.href = targetDestination;
         return;
       }
 
@@ -403,7 +405,7 @@ export default function EmailAuthForm({
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder={isStaff ? 'admin.staff@novainn.com' : 'tu-correo@ejemplo.com'}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -431,7 +433,7 @@ export default function EmailAuthForm({
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -488,7 +490,7 @@ export default function EmailAuthForm({
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         placeholder="tu-correo@ejemplo.com"
-                        className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                       />
                     </div>
                     <p className="mt-1 text-[11px] text-slate-400">
@@ -630,7 +632,7 @@ export default function EmailAuthForm({
                     value={regFullName}
                     onChange={(e) => setRegFullName(e.target.value)}
                     placeholder="Ej. Juan Pérez Quispe"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -649,7 +651,7 @@ export default function EmailAuthForm({
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     placeholder="tu-correo@ejemplo.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -667,7 +669,7 @@ export default function EmailAuthForm({
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
                     placeholder="+51 987 654 321"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -688,7 +690,7 @@ export default function EmailAuthForm({
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="Mín. 6 caracteres"
-                      className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -708,7 +710,7 @@ export default function EmailAuthForm({
                       value={regConfirmPassword}
                       onChange={(e) => setRegConfirmPassword(e.target.value)}
                       placeholder="Repite contraseña"
-                      className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-white/20 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
                     />
                   </div>
                 </div>

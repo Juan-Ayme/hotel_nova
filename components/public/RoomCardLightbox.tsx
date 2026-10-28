@@ -179,7 +179,7 @@ export default function RoomCardLightbox({
             </button>
 
             <Link
-              href={`/reservaciones?roomType=${roomType.id}`}
+              href={`/reservaciones?roomType=${roomType.id}&tipo=${roomType.slug}`}
               className="apple-button-accent flex-1 py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider text-center shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <span>Reservar</span>
@@ -399,7 +399,7 @@ export default function RoomCardLightbox({
                   Cerrar
                 </button>
                 <Link
-                  href={`/reservaciones?roomType=${roomType.id}`}
+                  href={`/reservaciones?roomType=${roomType.id}&tipo=${roomType.slug}`}
                   className="apple-button-accent px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg cursor-pointer"
                 >
                   <span>Reservar Ahora</span>

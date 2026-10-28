@@ -37,6 +37,7 @@ interface RealReservation {
 export default function AdminReservasPage() {
   const [reservations, setReservations] = useState<RealReservation[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('todas');
+  const [filterRoom, setFilterRoom] = useState<string>('todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -62,9 +63,21 @@ export default function AdminReservasPage() {
       if (!error && data) {
         const loaded: RealReservation[] = data.map((r: any) => {
           const g = r.guests;
-          const rr = Array.isArray(r.reservation_rooms) ? r.reservation_rooms[0] : r.reservation_rooms;
-          const roomNum = rr?.rooms?.room_number || 'N/A';
-          const typeName = rr?.room_types?.name || '';
+          const roomsArr = Array.isArray(r.reservation_rooms)
+            ? r.reservation_rooms
+            : r.reservation_rooms
+              ? [r.reservation_rooms]
+              : [];
+          const roomText = roomsArr.length > 0
+            ? roomsArr
+                .map((rr: any) => {
+                  const roomNum = rr?.rooms?.room_number ? `Hab. ${rr.rooms.room_number}` : 'Habitación';
+                  const typeName = rr?.room_types?.name ? ` (${rr.room_types.name})` : '';
+                  return `${roomNum}${typeName}`;
+                })
+                .join(' + ')
+            : 'Sin asignar';
+
           return {
             id: r.id,
             code: r.reservation_code,
@@ -72,7 +85,7 @@ export default function AdminReservasPage() {
             doc: g ? `${g.doc_type || 'DOC'}: ${g.doc_number || ''}` : '',
             phone: g?.phone || '',
             channel: r.channel,
-            room: `Hab. ${roomNum}${typeName ? ` (${typeName})` : ''}`,
+            room: roomText,
             checkIn: r.check_in_date,
             checkOut: r.check_out_date,
             total: parseFloat(r.total_amount_pen) || 0,
@@ -145,12 +158,21 @@ export default function AdminReservasPage() {
 
   const filtered = reservations.filter((r) => {
     if (filterStatus !== 'todas' && r.status !== filterStatus) return false;
+    if (filterRoom !== 'todas') {
+      const roomLower = r.room.toLowerCase();
+      if (filterRoom === 'piso-1' && !roomLower.includes('101') && !roomLower.includes('102') && !roomLower.includes('individual')) return false;
+      if (filterRoom === 'piso-2' && !roomLower.includes('201') && !roomLower.includes('202') && !roomLower.includes('matrimonial')) return false;
+      if (filterRoom === 'piso-3' && !roomLower.includes('301') && !roomLower.includes('302') && !roomLower.includes('twin') && !roomLower.includes('doble')) return false;
+      if (filterRoom === 'piso-4' && !roomLower.includes('401') && !roomLower.includes('familiar')) return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const match =
         r.code.toLowerCase().includes(q) ||
         r.guestName.toLowerCase().includes(q) ||
-        r.doc.toLowerCase().includes(q);
+        r.doc.toLowerCase().includes(q) ||
+        r.phone.toLowerCase().includes(q) ||
+        r.room.toLowerCase().includes(q);
       if (!match) return false;
     }
     return true;
@@ -187,20 +209,37 @@ export default function AdminReservasPage() {
       </div>
 
       {/* Barra de Filtros y Buscador estilo macOS Spotlight */}
-      <div className="apple-glass rounded-2xl p-3 sm:p-4 border border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar por código, huésped o documento..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all"
-          />
+      <div className="apple-glass rounded-2xl p-3 sm:p-4 border border-white/[0.12] flex flex-col md:flex-row items-center justify-between gap-3 shadow-lg bg-slate-900/90">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar por código, huésped, hab. (101, 201)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+            />
+          </div>
+
+          {/* Filtro por Habitación / Piso */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={filterRoom}
+              onChange={(e) => setFilterRoom(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-950/80 border border-white/15 text-xs text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+            >
+              <option value="todas">Todas las Habitaciones (7)</option>
+              <option value="piso-1">Piso 1: Hab. 101, 102 (Individual)</option>
+              <option value="piso-2">Piso 2: Hab. 201, 202 (Matrimonial)</option>
+              <option value="piso-3">Piso 3: Hab. 301, 302 (Doble Twin)</option>
+              <option value="piso-4">Piso 4: Hab. 401 (Familiar Superior)</option>
+            </select>
+          </div>
         </div>
 
         {/* Segmented Control iOS para filtrar estado */}
-        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto p-1 rounded-xl bg-black/30 border border-white/[0.06]">
+        <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto p-1 rounded-xl bg-black/40 border border-white/[0.1]">
           {['todas', 'confirmada', 'pago_en_verificacion', 'pendiente_pago', 'finalizada'].map(
             (st) => (
               <button
@@ -210,7 +249,7 @@ export default function AdminReservasPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all shrink-0 cursor-pointer ${
                   filterStatus === st
                     ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
                 {st.replace(/_/g, ' ')}

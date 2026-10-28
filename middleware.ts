@@ -39,14 +39,18 @@ export async function middleware(request: NextRequest) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/login';
       loginUrl.searchParams.set('next', pathname);
-      return NextResponse.redirect(loginUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return redirectResponse;
     }
 
     const { data: staffProfile } = await supabase
       .from('staff_profiles')
       .select('role, is_active')
-      .ilike('google_email', user.email)
-      .single();
+      .or(`google_email.ilike.${user.email},auth_user_id.eq.${user.id}`)
+      .maybeSingle();
 
     if (!staffProfile || !staffProfile.is_active) {
       return NextResponse.redirect(new URL('/mis-reservas?alerta=acceso_restringido_personal', request.url));
@@ -65,5 +69,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin', '/admin/:path*'],
 };

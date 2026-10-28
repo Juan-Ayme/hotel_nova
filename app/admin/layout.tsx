@@ -16,24 +16,24 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  let userEmail = user?.email || 'admin.novainn@gmail.com';
-  let fullName = user?.user_metadata?.full_name || 'Personal Hotel Nova Inn';
-  let avatarUrl = user?.user_metadata?.avatar_url || null;
-  let role: UserRole = 'administrador';
-
-  if (user?.email) {
-    const { data: staff } = await supabase
-      .from('staff_profiles')
-      .select('role, is_active, full_name, avatar_url')
-      .ilike('google_email', user.email)
-      .single();
-
-    if (staff && staff.is_active) {
-      role = staff.role;
-      fullName = staff.full_name || fullName;
-      avatarUrl = staff.avatar_url || avatarUrl;
-    }
+  if (!user || !user.email) {
+    redirect('/login?next=/admin');
   }
+
+  const { data: staff } = await supabase
+    .from('staff_profiles')
+    .select('role, is_active, full_name, avatar_url')
+    .or(`google_email.ilike.${user.email},auth_user_id.eq.${user.id}`)
+    .maybeSingle();
+
+  if (!staff || !staff.is_active) {
+    redirect('/mis-reservas?alerta=acceso_restringido_personal');
+  }
+
+  const userEmail = user.email;
+  const fullName = staff.full_name || user.user_metadata?.full_name || userEmail.split('@')[0];
+  const avatarUrl = staff.avatar_url || user.user_metadata?.avatar_url || null;
+  const role = staff.role as UserRole;
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#070b12] via-[#0d131f] to-[#0a0e17] text-slate-100">

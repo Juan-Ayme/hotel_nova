@@ -61,6 +61,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
+          {isDirectStaff && (
+            <div className="rounded-2xl bg-blue-500/15 border border-blue-500/30 p-3.5 text-xs text-blue-200 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 shrink-0 text-blue-400 mt-0.5" />
+              <div>
+                <strong className="text-white font-semibold block">
+                  Autenticación de Administrador Requerida
+                </strong>
+                <p className="text-[11px] text-blue-300/80 leading-relaxed mt-0.5">
+                  El panel de control está protegido para el equipo de Hotel Nova Inn. Ingresa con tu correo de administrador o recepcionista autorizado.
+                </p>
+              </div>
+            </div>
+          )}
+
           {alerta === 'sesion_cerrada' && (
             <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/25 p-3 text-xs text-emerald-300 flex items-center gap-2.5">
               <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />

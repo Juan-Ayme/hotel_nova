@@ -25,9 +25,17 @@ import {
   ArrowLeft,
   Download,
   Share2,
+  DoorClosed,
 } from 'lucide-react';
 import { addDays } from 'date-fns';
 import { generateReservationPDF } from '@/lib/utils/pdf-generator';
+
+const ROOM_FLOOR_DATA: Record<string, { floor: number; rooms: string[]; maxRooms: number }> = {
+  'individual-estandar': { floor: 1, rooms: ['101', '102'], maxRooms: 2 },
+  'matrimonial-confort': { floor: 2, rooms: ['201', '202'], maxRooms: 2 },
+  'doble-twin': { floor: 3, rooms: ['301', '302'], maxRooms: 2 },
+  'familiar-superior': { floor: 4, rooms: ['401'], maxRooms: 1 },
+};
 
 const FALLBACK_ROOM_TYPES: RoomType[] = [
   {
@@ -132,9 +140,23 @@ export default function BookingStepper() {
 
         if (!error && data && data.length > 0) {
           setRoomTypes(data as any);
-          const q = searchParams.get('roomType');
-          const matched = data.find((r: any) => r.slug === q || r.id === q);
-          setSelectedRoomId(matched ? matched.id : data[0].id);
+          const q = searchParams.get('roomType') || searchParams.get('tipo');
+          if (q) {
+            const matched = data.find((r: any) => r.slug === q || r.id === q);
+            if (matched) {
+              setSelectedRoomId(matched.id);
+            }
+          } else {
+            setSelectedRoomId((prevId) => {
+              const currentFallback = FALLBACK_ROOM_TYPES.find((f) => f.id === prevId);
+              if (currentFallback) {
+                const realEquiv = data.find((r: any) => r.slug === currentFallback.slug);
+                return realEquiv ? realEquiv.id : data[0].id;
+              }
+              const exists = data.some((r: any) => r.id === prevId);
+              return exists ? prevId : data[0].id;
+            });
+          }
         }
       } catch (err) {
         console.error('Error al cargar tipos de habitación:', err);
@@ -194,6 +216,17 @@ export default function BookingStepper() {
 
   const nights = calculateNights(checkIn, checkOut);
   const selectedRoom = roomTypes.find((r) => r.id === selectedRoomId) || roomTypes[0];
+  const floorInfo = ROOM_FLOOR_DATA[selectedRoom?.slug || ''] || { floor: 2, rooms: ['201', '202'], maxRooms: 2 };
+
+  // Validar y ajustar que no exceda las habitaciones reales de ese piso
+  useEffect(() => {
+    if (roomsCount > floorInfo.maxRooms) {
+      setRoomsCount(floorInfo.maxRooms);
+    }
+  }, [floorInfo.maxRooms, roomsCount]);
+
+  const totalCapacity = (selectedRoom?.max_guests || 1) * roomsCount;
+  const isOverCapacity = guestsCount > totalCapacity;
   const subtotalBase = nights * (selectedRoom?.base_price_pen || 100) * roomsCount;
   const totalConDescuento = Math.max(0, subtotalBase - appliedDiscount);
   const taxBreakdown = calculateTaxBreakdown(totalConDescuento, 18);
@@ -347,7 +380,7 @@ export default function BookingStepper() {
 
               {/* Selector de Fechas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+                <div className="p-3.5 rounded-2xl bg-slate-900/85 border border-white/15 hover:border-white/30 transition-colors shadow-sm">
                   <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
                     <Calendar className="w-3.5 h-3.5 text-sky-400" />
                     <span>Fecha de Ingreso (Check-in)</span>
@@ -367,7 +400,7 @@ export default function BookingStepper() {
                   <span className="text-[10px] text-slate-500 mt-1 block">A partir de las 14:00 hrs</span>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+                <div className="p-3.5 rounded-2xl bg-slate-900/85 border border-white/15 hover:border-white/30 transition-colors shadow-sm">
                   <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
                     <Calendar className="w-3.5 h-3.5 text-sky-400" />
                     <span>Fecha de Salida (Check-out)</span>
@@ -385,7 +418,7 @@ export default function BookingStepper() {
 
               {/* Huéspedes y Habitaciones */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
+                <div className="p-3.5 rounded-2xl bg-slate-900/85 border border-white/15 hover:border-white/30 transition-colors shadow-sm">
                   <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
                     <Users className="w-3.5 h-3.5 text-sky-400" />
                     <span>Huéspedes</span>
@@ -403,24 +436,53 @@ export default function BookingStepper() {
                   </select>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-white/20 transition-colors">
-                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
-                    <BedDouble className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Habitaciones</span>
-                  </label>
+                <div className="p-3.5 rounded-2xl bg-slate-900/85 border border-white/15 hover:border-white/30 transition-colors shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <BedDouble className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Habitaciones</span>
+                    </label>
+                    <span className="text-[10px] font-mono text-sky-400 font-semibold">
+                      Piso {floorInfo.floor}
+                    </span>
+                  </div>
                   <select
                     value={roomsCount}
                     onChange={(e) => setRoomsCount(parseInt(e.target.value, 10))}
                     className="w-full bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer [color-scheme:dark]"
                   >
-                    {[1, 2, 3, 4].map((n) => (
+                    {Array.from({ length: floorInfo.maxRooms }, (_, idx) => idx + 1).map((n) => (
                       <option key={n} value={n} className="bg-slate-900 text-white">
-                        {n} {n === 1 ? 'habitación' : 'habitaciones'}
+                        {n} {n === 1 ? 'habitación' : 'habitaciones'} ({n === 1 ? `Hab. ${floorInfo.rooms[0]}` : `Piso ${floorInfo.floor} completo`})
                       </option>
                     ))}
                   </select>
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    {floorInfo.rooms.length === 1
+                      ? `Solo 1 hab. disponible en el Piso ${floorInfo.floor} (Hab. ${floorInfo.rooms[0]})`
+                      : `Piso ${floorInfo.floor} • Habitaciones ${floorInfo.rooms.join(' y ')}`}
+                  </span>
                 </div>
               </div>
+
+              {/* Alerta de Capacidad si los huéspedes superan el aforo de las habitaciones elegidas */}
+              {isOverCapacity && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white block font-semibold">Atención de Capacidad:</strong>
+                    <p className="text-[11px] text-amber-300/90 mt-0.5 leading-relaxed">
+                      Has indicado <strong>{guestsCount} personas</strong>, pero {roomsCount} {selectedRoom.name} permite un aforo máximo de <strong>{totalCapacity} huésped(es)</strong>.
+                      {floorInfo.maxRooms > roomsCount
+                        ? ` Puedes cambiar a ${floorInfo.maxRooms} habitaciones en este piso, o `
+                        : ' '}
+                      {selectedRoom.slug !== 'familiar-superior'
+                        ? 'seleccionar la Habitación Familiar Superior (Piso 4, hasta 4 personas).'
+                        : 'te sugerimos reservar habitaciones adicionales.'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Selector de Habitación estilo Apple Product Cards */}
               <div>
@@ -430,6 +492,8 @@ export default function BookingStepper() {
                 <div className="space-y-3">
                   {roomTypes.map((room) => {
                     const isSelected = selectedRoomId === room.id;
+                    const rf = ROOM_FLOOR_DATA[room.slug] || { floor: 1, rooms: [], maxRooms: 2 };
+
                     return (
                       <div
                         key={room.id}
@@ -451,6 +515,15 @@ export default function BookingStepper() {
                             <p className="text-xs text-slate-400 mt-0.5">
                               {room.beds_description} • Hasta {room.max_guests} huéspedes
                             </p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-sky-300 font-mono text-[10px]">
+                                <DoorClosed className="w-3 h-3" />
+                                Piso {rf.floor} • Hab. {rf.rooms.join(', ')}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                ({rf.maxRooms} {rf.maxRooms === 1 ? 'hab. en este piso' : 'habs. en este piso'})
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -530,7 +603,7 @@ export default function BookingStepper() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Ej. Juan Carlos"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all placeholder:text-slate-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-500 shadow-sm"
                   />
                 </div>
                 <div>
@@ -543,7 +616,7 @@ export default function BookingStepper() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Ej. Pérez Quispe"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all placeholder:text-slate-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-500 shadow-sm"
                   />
                 </div>
               </div>
@@ -557,7 +630,7 @@ export default function BookingStepper() {
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value as IdentityDocType)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/[0.08] text-sm text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/40 cursor-pointer"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/20 text-sm text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer shadow-sm"
                   >
                     <option value="DNI">DNI (Documento Nacional de Identidad)</option>
                     <option value="CE">Carnet de Extranjería (CE)</option>
@@ -575,7 +648,7 @@ export default function BookingStepper() {
                     onChange={(e) => setDocNumber(e.target.value)}
                     placeholder={docType === 'DNI' ? '8 dígitos' : 'Número de documento'}
                     maxLength={docType === 'DNI' ? 8 : 20}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all font-mono placeholder:text-slate-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono placeholder:text-slate-500 shadow-sm"
                   />
                 </div>
               </div>
@@ -592,7 +665,7 @@ export default function BookingStepper() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="correo@ejemplo.com"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all placeholder:text-slate-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-500 shadow-sm"
                   />
                 </div>
                 <div>
@@ -605,7 +678,7 @@ export default function BookingStepper() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="987654321"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all font-mono placeholder:text-slate-600"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono placeholder:text-slate-500 shadow-sm"
                   />
                 </div>
               </div>

@@ -4,33 +4,59 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
-// 1. OBTENER RESERVAS DEL USUARIO AUTENTICADO O POR CÓDIGO
+// 1. OBTENER RESERVAS DEL USUARIO AUTENTICADO O POR CÓDIGO(S)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const queryCode = searchParams.get('codigo') || searchParams.get('code');
+    const queryCodes = searchParams.get('codes');
     const queryEmail = searchParams.get('email');
 
     const admin = createAdminClient();
+    const selectFields = `
+      *,
+      guests (*),
+      reservation_rooms (
+        *,
+        room_types (*),
+        rooms (*)
+      ),
+      payments (*)
+    `;
 
-    // Si viene un código de reserva directo
+    // 1. Si viene una lista de códigos separados por coma
+    if (queryCodes && queryCodes.trim().length > 0) {
+      const codesList = queryCodes
+        .split(',')
+        .map((c) => c.trim().toUpperCase())
+        .filter(Boolean);
+
+      if (codesList.length > 0) {
+        const { data: resByCodes, error: codesError } = await admin
+          .from('reservations')
+          .select(selectFields)
+          .in('reservation_code', codesList)
+          .order('created_at', { ascending: false });
+
+        if (!codesError && resByCodes && resByCodes.length > 0) {
+          return NextResponse.json({ reservations: resByCodes });
+        }
+      }
+    }
+
+    // 2. Si viene un código de reserva individual
     if (queryCode && queryCode.trim().length > 0) {
       const { data: resByCode, error: codeError } = await admin
         .from('reservations')
-        .select(`
-          *,
-          guests (*),
-          reservation_rooms (
-            *,
-            room_types (*)
-          ),
-          payments (*)
-        `)
+        .select(selectFields)
         .eq('reservation_code', queryCode.trim().toUpperCase())
         .order('created_at', { ascending: false });
 
       if (!codeError && resByCode && resByCode.length > 0) {
-        return NextResponse.json({ reservations: resByCode });
+        // Si no se pasó email adicional, retornar la reserva encontrada
+        if (!queryEmail) {
+          return NextResponse.json({ reservations: resByCode });
+        }
       }
     }
 
@@ -42,11 +68,19 @@ export async function GET(request: Request) {
     const effectiveEmail = user?.email || (queryEmail ? queryEmail.trim().toLowerCase() : null);
 
     if (!effectiveEmail) {
-      // Si no hay email ni código, devolver lista vacía en lugar de 401 para permitir renderizado limpio
+      // Si se buscó por código individual y no hay email, retornar lo que se encontró (o vacío)
+      if (queryCode && queryCode.trim().length > 0) {
+        const { data: resByCode } = await admin
+          .from('reservations')
+          .select(selectFields)
+          .eq('reservation_code', queryCode.trim().toUpperCase())
+          .order('created_at', { ascending: false });
+        return NextResponse.json({ reservations: resByCode || [] });
+      }
       return NextResponse.json({ reservations: [] });
     }
 
-    // 1. Buscar los guest_id asociados al correo o auth_user_id
+    // 3. Buscar los guest_id asociados al correo o auth_user_id
     const { data: guests, error: guestError } = await admin
       .from('guests')
       .select('id')
@@ -58,23 +92,16 @@ export async function GET(request: Request) {
     }
 
     if (!guests || guests.length === 0) {
+      // Si no hay perfil de huésped registrado con ese email, devolver vacío o por código si existía
       return NextResponse.json({ reservations: [] });
     }
 
     const guestIds = guests.map((g) => g.id);
 
-    // 2. Buscar todas las reservas de esos guest_ids
+    // 4. Buscar todas las reservas de esos guest_ids
     const { data: reservations, error: resError } = await admin
       .from('reservations')
-      .select(`
-        *,
-        guests (*),
-        reservation_rooms (
-          *,
-          room_types (*)
-        ),
-        payments (*)
-      `)
+      .select(selectFields)
       .in('guest_id', guestIds)
       .order('created_at', { ascending: false });
 
@@ -115,7 +142,8 @@ export async function POST(request: Request) {
         guests (*),
         reservation_rooms (
           *,
-          room_types (*)
+          room_types (*),
+          rooms (*)
         ),
         payments (*)
       `)

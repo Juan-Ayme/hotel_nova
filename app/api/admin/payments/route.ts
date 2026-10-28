@@ -53,6 +53,10 @@ export async function GET(request: Request) {
             doc_number,
             email,
             phone
+          ),
+          reservation_rooms (
+            room_types (name),
+            rooms (room_number)
           )
         )
       `)

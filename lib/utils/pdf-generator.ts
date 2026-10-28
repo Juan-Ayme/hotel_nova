@@ -92,14 +92,14 @@ export function generateReservationPDF(reservation: Reservation): void {
 
   // Sección Datos de la Estancia
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(14, currentY, pageWidth - 28, 28, 2, 2, 'F');
+  doc.roundedRect(14, currentY, pageWidth - 28, 34, 2, 2, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, currentY, pageWidth - 28, 28, 2, 2, 'S');
+  doc.roundedRect(14, currentY, pageWidth - 28, 34, 2, 2, 'S');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...appleBlue);
-  doc.text('DETALLES DE LA ESTADÍA', 18, currentY + 6);
+  doc.text('DETALLES DE LA ESTADÍA Y HABITACIÓN', 18, currentY + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -109,7 +109,21 @@ export function generateReservationPDF(reservation: Reservation): void {
   doc.text(`Noches: ${reservation.total_nights}`, 110, currentY + 13);
   doc.text(`Huéspedes: ${reservation.guests_count} personas`, 110, currentY + 20);
 
-  currentY += 38;
+  const roomNames = reservation.reservation_rooms
+    ?.map((rr) => {
+      const name = rr.room_types?.name || 'Habitación';
+      const num = rr.rooms?.room_number ? ` (Hab. ${rr.rooms.room_number})` : '';
+      return `${name}${num}`;
+    })
+    .filter(Boolean)
+    .join(', ') || 'Habitación Confort Nova Inn';
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Habitación:`, 18, currentY + 27);
+  doc.setFont('helvetica', 'normal');
+  doc.text(roomNames, 38, currentY + 27);
+
+  currentY += 42;
 
   // Tabla de desglose financiero
   doc.setFont('helvetica', 'bold');

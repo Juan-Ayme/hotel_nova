@@ -53,6 +53,7 @@ const SERVICES = [
 const FEATURED_ROOMS = [
   {
     name: 'Habitación Matrimonial Confort',
+    slug: 'matrimonial-confort',
     type: 'Parejas / Individual',
     price: 120,
     beds: '1 Cama Queen Size',
@@ -61,6 +62,7 @@ const FEATURED_ROOMS = [
   },
   {
     name: 'Habitación Doble Twin',
+    slug: 'doble-twin',
     type: '2 Personas',
     price: 130,
     beds: '2 Camas de 1.5 Plazas',
@@ -69,6 +71,7 @@ const FEATURED_ROOMS = [
   },
   {
     name: 'Habitación Familiar Superior',
+    slug: 'familiar-superior',
     type: 'Hasta 4 Personas',
     price: 190,
     beds: '1 Matrimonial + 2 de 1.5 Plazas',
@@ -215,7 +218,7 @@ export default function HomePage() {
                   </div>
 
                   <Link
-                    href={`/reservaciones`}
+                    href={`/reservaciones?tipo=${room.slug}`}
                     className="apple-button-accent w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-wider text-center shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>Consultar y Reservar</span>

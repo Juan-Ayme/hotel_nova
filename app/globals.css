@@ -12,21 +12,21 @@
   --terracotta-hover: #f97316;
   --warm-gold: #d97706;
   --warm-gold-dark: #b45309;
-  --apple-surface: rgba(255, 255, 255, 0.88);
-  --apple-border: rgba(194, 65, 12, 0.12);
+  --apple-surface: rgba(255, 255, 255, 0.98);
+  --apple-border: rgba(194, 65, 12, 0.16);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #12100e;
+  --background: #090c13;
   --foreground: #fafaf9;
   --terracotta: #ea580c;
   --terracotta-dark: #c2410c;
   --terracotta-hover: #f97316;
   --warm-gold: #d97706;
   --warm-gold-dark: #b45309;
-  --apple-surface: rgba(28, 24, 22, 0.68);
-  --apple-border: rgba(234, 88, 12, 0.18);
+  --apple-surface: rgba(13, 17, 28, 0.97);
+  --apple-border: rgba(255, 255, 255, 0.14);
 }
 
 @theme inline {
@@ -96,53 +96,53 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 
 /* Apple Glassmorphism Dinámico para Barra y Menús */
 .dark .apple-glass {
-  background: rgba(24, 20, 18, 0.72);
+  background: rgba(11, 15, 25, 0.96);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 }
 
 html:not(.dark) .apple-glass {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(194, 65, 12, 0.12);
-  box-shadow: 0 16px 36px -10px rgba(120, 53, 15, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(194, 65, 12, 0.16);
+  box-shadow: 0 16px 36px -10px rgba(120, 53, 15, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
 /* Tarjetas Dinámicas Glassmorphism */
 .dark .apple-glass-card {
-  background: rgba(28, 23, 20, 0.65);
+  background: rgba(15, 20, 32, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 
 html:not(.dark) .apple-glass-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(194, 65, 12, 0.1);
+  border: 1px solid rgba(194, 65, 12, 0.14);
   box-shadow: 0 10px 25px -5px rgba(120, 53, 15, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
 }
 
 /* Dock Dinámico */
 .dark .apple-dock {
-  background: rgba(24, 19, 17, 0.82);
+  background: rgba(11, 15, 25, 0.97);
   backdrop-filter: blur(32px) saturate(200%);
   -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 html:not(.dark) .apple-dock {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(32px) saturate(200%);
   -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(194, 65, 12, 0.15);
-  box-shadow: 0 20px 40px -12px rgba(120, 53, 15, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(194, 65, 12, 0.18);
+  box-shadow: 0 20px 40px -12px rgba(120, 53, 15, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 /* Pill Button Dinámico */

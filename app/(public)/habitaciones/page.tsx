@@ -244,15 +244,35 @@ export default function HabitacionesPage() {
     setSelectedAmenity('all');
   };
 
-  // Agrupar los 7 cuartos físicos por piso
+  // Filtrar los cuartos físicos con los mismos criterios dinámicos
+  const filteredPhysicalRooms = useMemo(() => {
+    return physicalRooms.filter((r) => {
+      if (guestFilter !== 'all' && r.max_guests < guestFilter) {
+        return false;
+      }
+      if (r.price > maxPrice) {
+        return false;
+      }
+      if (selectedAmenity !== 'all') {
+        const parentType = roomTypes.find((rt) => rt.slug === r.room_type_slug || rt.id === r.room_type_id);
+        const hasAmenity = parentType?.amenities?.some((a) =>
+          a.toLowerCase().includes(selectedAmenity.toLowerCase())
+        );
+        if (!hasAmenity) return false;
+      }
+      return true;
+    });
+  }, [physicalRooms, guestFilter, maxPrice, selectedAmenity, roomTypes]);
+
+  // Agrupar los cuartos físicos filtrados por piso
   const roomsByFloor = useMemo(() => {
     const grouped: Record<number, PhysicalRoomItem[]> = {};
-    physicalRooms.forEach((r) => {
+    filteredPhysicalRooms.forEach((r) => {
       if (!grouped[r.floor]) grouped[r.floor] = [];
       grouped[r.floor].push(r);
     });
     return grouped;
-  }, [physicalRooms]);
+  }, [filteredPhysicalRooms]);
 
   return (
     <div className="flex flex-col gap-10 pb-24">
@@ -277,7 +297,7 @@ export default function HabitacionesPage() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Por Categorías</span>
+            <span>Por Categorías ({filteredRooms.length})</span>
           </button>
           <button
             type="button"
@@ -289,7 +309,85 @@ export default function HabitacionesPage() {
             }`}
           >
             <Building className="w-4 h-4" />
-            <span>Mapa por Pisos</span>
+            <span>Mapa por Pisos ({filteredPhysicalRooms.length})</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Barra de Filtros Dinámicos (Aplica a Categorías y a Mapa por Pisos) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-4">
+        <div className="apple-glass-card rounded-[28px] p-5 sm:p-6 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-6 border">
+          <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
+            <SlidersHorizontal className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            <span>Filtros Dinámicos</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+            {/* Filtro por Capacidad */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                Capacidad de Huéspedes
+              </label>
+              <select
+                value={guestFilter}
+                onChange={(e) =>
+                  setGuestFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
+                }
+                className="px-3.5 py-2.5 rounded-xl bg-stone-100/70 dark:bg-white/[0.04] border border-stone-200 dark:border-white/[0.08] text-xs font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 cursor-pointer"
+              >
+                <option value="all" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Todas las capacidades</option>
+                <option value="1" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">1 huésped a más</option>
+                <option value="2" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">2 huéspedes a más</option>
+                <option value="4" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">4 huéspedes (Familias)</option>
+              </select>
+            </div>
+
+            {/* Filtro por Precio Máximo */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                <span>Precio Máximo</span>
+                <span className="text-orange-600 dark:text-amber-400 font-mono font-bold">
+                  Hasta S/ {maxPrice}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={80}
+                max={250}
+                step={10}
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(parseInt(e.target.value, 10))}
+                className="w-full accent-orange-500 cursor-pointer h-1.5 bg-stone-200 dark:bg-white/10 rounded-lg appearance-none mt-2"
+              />
+            </div>
+
+            {/* Filtro por Comodidad */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                Comodidad Destacada
+              </label>
+              <select
+                value={selectedAmenity}
+                onChange={(e) => setSelectedAmenity(e.target.value)}
+                className="px-3.5 py-2.5 rounded-xl bg-stone-100/70 dark:bg-white/[0.04] border border-stone-200 dark:border-white/[0.08] text-xs font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 cursor-pointer"
+              >
+                <option value="all" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Cualquier comodidad</option>
+                <option value="Frigobar" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Frigobar</option>
+                <option value="Cochera" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Cochera privada</option>
+                <option value="Smart TV" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Smart TV 4K</option>
+                <option value="Escritorio" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Escritorio ergonómico</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="apple-pill-btn p-2.5 rounded-xl transition-all shrink-0 cursor-pointer"
+            title="Restablecer filtros"
+          >
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </section>
@@ -297,84 +395,6 @@ export default function HabitacionesPage() {
       {/* VISTA 1: POR CATEGORÍA (4 MODELOS) */}
       {viewMode === 'categorias' && (
         <div className="space-y-10">
-          {/* Barra de Filtros Interactiva estilo iOS Control Center */}
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full -mt-4">
-            <div className="apple-glass-card rounded-[28px] p-5 sm:p-6 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-6 border">
-              <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-orange-500" />
-                <SlidersHorizontal className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                <span>Filtros Dinámicos</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-                {/* Filtro por Capacidad */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                    Capacidad de Huéspedes
-                  </label>
-                  <select
-                    value={guestFilter}
-                    onChange={(e) =>
-                      setGuestFilter(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))
-                    }
-                    className="px-3.5 py-2.5 rounded-xl bg-stone-100/70 dark:bg-white/[0.04] border border-stone-200 dark:border-white/[0.08] text-xs font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 cursor-pointer"
-                  >
-                    <option value="all" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Todas las capacidades</option>
-                    <option value="1" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">1 huésped a más</option>
-                    <option value="2" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">2 huéspedes a más</option>
-                    <option value="4" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">4 huéspedes (Familias)</option>
-                  </select>
-                </div>
-
-                {/* Filtro por Precio Máximo */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                    <span>Precio Máximo</span>
-                    <span className="text-orange-600 dark:text-amber-400 font-mono font-bold">
-                      Hasta S/ {maxPrice}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={80}
-                    max={250}
-                    step={10}
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(parseInt(e.target.value, 10))}
-                    className="w-full accent-orange-500 cursor-pointer h-1.5 bg-stone-200 dark:bg-white/10 rounded-lg appearance-none mt-2"
-                  />
-                </div>
-
-                {/* Filtro por Comodidad */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400">
-                    Comodidad Destacada
-                  </label>
-                  <select
-                    value={selectedAmenity}
-                    onChange={(e) => setSelectedAmenity(e.target.value)}
-                    className="px-3.5 py-2.5 rounded-xl bg-stone-100/70 dark:bg-white/[0.04] border border-stone-200 dark:border-white/[0.08] text-xs font-medium text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 cursor-pointer"
-                  >
-                    <option value="all" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Cualquier comodidad</option>
-                    <option value="Frigobar" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Frigobar</option>
-                    <option value="Cochera" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Cochera privada</option>
-                    <option value="Smart TV" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Smart TV 4K</option>
-                    <option value="Escritorio" className="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-white">Con Escritorio ergonómico</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="apple-pill-btn p-2.5 rounded-xl transition-all shrink-0 cursor-pointer"
-                title="Restablecer filtros"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
-          </section>
-
           {/* Grilla de Categorías */}
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             {filteredRooms.length === 0 ? (
@@ -421,81 +441,102 @@ export default function HabitacionesPage() {
             </p>
           </div>
 
-          {[1, 2, 3, 4].map((floorNum) => {
-            const floorRooms = roomsByFloor[floorNum] || [];
-            return (
-              <div key={floorNum} className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-orange-600/15 border border-orange-500/30 text-orange-700 dark:text-orange-400 flex items-center justify-center font-mono font-bold text-sm">
-                    {floorNum}
-                  </div>
-                  <div>
-                    <h4 className="text-base font-bold text-stone-900 dark:text-white">
-                      Piso {floorNum}
-                    </h4>
-                    <span className="text-[11px] text-stone-500 dark:text-stone-400">
-                      {floorRooms.length} {floorRooms.length === 1 ? 'habitación disponible' : 'habitaciones disponibles'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {floorRooms.map((r) => (
-                    <div
-                      key={r.id}
-                      className="apple-glass-card rounded-[24px] p-5 border hover:border-orange-500/40 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
-                    >
-                      <div className="space-y-3">
-                        <div className="relative h-40 w-full rounded-2xl overflow-hidden bg-stone-900">
-                          <Image
-                            src={r.photo}
-                            alt={`Habitación ${r.room_number}`}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-white font-mono font-black text-sm border border-white/20">
-                            Hab. {r.room_number}
-                          </div>
-                          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40 backdrop-blur-md flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span>Disponible</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <span className="text-[10px] uppercase tracking-wider text-orange-700 dark:text-orange-400 font-bold block">
-                            Piso {r.floor} • Capacidad: {r.max_guests} huéspedes
-                          </span>
-                          <h5 className="text-lg font-bold text-stone-900 dark:text-white mt-0.5">
-                            {r.room_type_name}
-                          </h5>
-                          <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
-                            {r.beds_desc}
-                          </p>
-                        </div>
+          {filteredPhysicalRooms.length === 0 ? (
+            <div className="apple-glass-card rounded-[32px] p-12 text-center max-w-lg mx-auto space-y-4">
+              <BedDouble className="w-12 h-12 text-slate-500 mx-auto" />
+              <h3 className="text-lg font-bold text-white">
+                No encontramos habitaciones en los pisos con esos filtros
+              </h3>
+              <p className="text-xs text-slate-400">
+                Intenta ampliar el rango de precio o cambiar la capacidad seleccionada.
+              </p>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="apple-button-accent px-6 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-wider cursor-pointer"
+              >
+                Restablecer Filtros
+              </button>
+            </div>
+          ) : (
+            [1, 2, 3, 4]
+              .filter((floorNum) => (roomsByFloor[floorNum] || []).length > 0)
+              .map((floorNum) => {
+                const floorRooms = roomsByFloor[floorNum] || [];
+                return (
+                  <div key={floorNum} className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-orange-600/15 border border-orange-500/30 text-orange-700 dark:text-orange-400 flex items-center justify-center font-mono font-bold text-sm">
+                        {floorNum}
                       </div>
-
-                      <div className="pt-4 mt-4 border-t border-stone-200 dark:border-white/[0.06] flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-stone-500 dark:text-stone-400 block">Tarifa Oficial</span>
-                          <span className="font-mono text-lg font-bold text-orange-700 dark:text-emerald-400">
-                            {formatCurrency(r.price)}
-                          </span>
-                        </div>
-                        <Link
-                          href={`/reservaciones?tipo=${r.room_type_slug}`}
-                          className="apple-button-accent px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                        >
-                          <CalendarDays className="w-3.5 h-3.5" />
-                          <span>Reservar Hab. {r.room_number}</span>
-                        </Link>
+                      <div>
+                        <h4 className="text-base font-bold text-stone-900 dark:text-white">
+                          Piso {floorNum}
+                        </h4>
+                        <span className="text-[11px] text-stone-500 dark:text-stone-400">
+                          {floorRooms.length} {floorRooms.length === 1 ? 'habitación disponible' : 'habitaciones disponibles'}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {floorRooms.map((r) => (
+                        <div
+                          key={r.id}
+                          className="apple-glass-card rounded-[24px] p-5 border hover:border-orange-500/40 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
+                        >
+                          <div className="space-y-3">
+                            <div className="relative h-40 w-full rounded-2xl overflow-hidden bg-stone-900">
+                              <Image
+                                src={r.photo}
+                                alt={`Habitación ${r.room_number}`}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-white font-mono font-black text-sm border border-white/20">
+                                Hab. {r.room_number}
+                              </div>
+                              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40 backdrop-blur-md flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <span>Disponible</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider text-orange-700 dark:text-orange-400 font-bold block">
+                                Piso {r.floor} • Capacidad: {r.max_guests} huéspedes
+                              </span>
+                              <h5 className="text-lg font-bold text-stone-900 dark:text-white mt-0.5">
+                                {r.room_type_name}
+                              </h5>
+                              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
+                                {r.beds_desc}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-4 mt-4 border-t border-stone-200 dark:border-white/[0.06] flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] text-stone-500 dark:text-stone-400 block">Tarifa Oficial</span>
+                              <span className="font-mono text-lg font-bold text-orange-700 dark:text-emerald-400">
+                                {formatCurrency(r.price)}
+                              </span>
+                            </div>
+                            <Link
+                              href={`/reservaciones?roomType=${r.room_type_id}&tipo=${r.room_type_slug}`}
+                              className="apple-button-accent px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                            >
+                              <CalendarDays className="w-3.5 h-3.5" />
+                              <span>Reservar Hab. {r.room_number}</span>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+          )}
         </section>
       )}
     </div>
