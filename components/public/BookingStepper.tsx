@@ -831,6 +831,8 @@ export default function BookingStepper() {
                 reservationCode={reservationResult.reservationCode}
                 totalAmount={reservationResult.totalAmount}
                 expiresAt={reservationResult.expiresAt}
+                guestEmail={email}
+                guestName={`${firstName} ${lastName}`.trim()}
                 onPaymentSubmitted={() => setCurrentStep(4)}
               />
             </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
 
     // 1. Obtener la reserva para validar ID y Monto
-    let query = admin.from('reservations').select('id, reservation_code, total_amount_pen, status');
+    let query = admin.from('reservations').select('id, reservation_code, total_amount_pen, status, guest_id');
     if (reservationId && reservationId.length === 36) {
       query = query.eq('id', reservationId);
     } else if (reservationCode) {
@@ -105,6 +106,23 @@ export async function POST(request: Request) {
 
     if (updateResError) {
       console.error('Error actualizando reserva:', updateResError);
+    }
+
+    // 5. Vincular cuenta de usuario al registro del huésped para que quede guardada en su perfil
+    try {
+      const supabaseUser = await createServerSupabaseClient();
+      const {
+        data: { user },
+      } = await supabaseUser.auth.getUser();
+
+      if (user?.id && resData.guest_id) {
+        await admin
+          .from('guests')
+          .update({ auth_user_id: user.id })
+          .eq('id', resData.guest_id);
+      }
+    } catch (authLinkErr) {
+      console.warn('Nota al vincular auth_user_id en pago:', authLinkErr);
     }
 
     return NextResponse.json({

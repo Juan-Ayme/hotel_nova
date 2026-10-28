@@ -13,6 +13,14 @@ import {
   Building2,
   CreditCard,
   ShieldCheck,
+  Lock,
+  Mail,
+  KeyRound,
+  Send,
+  LogIn,
+  User,
+  Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { DEFAULT_HOTEL_INFO } from '@/lib/constants/hotel-info';
 
@@ -21,6 +29,8 @@ interface PaymentTimerAndUploadProps {
   reservationCode: string;
   totalAmount: number;
   expiresAt: string;
+  guestEmail?: string;
+  guestName?: string;
   onPaymentSubmitted: (data: { method: string; operationNumber: string }) => void;
 }
 
@@ -29,6 +39,8 @@ export default function PaymentTimerAndUpload({
   reservationCode,
   totalAmount,
   expiresAt,
+  guestEmail,
+  guestName,
   onPaymentSubmitted,
 }: PaymentTimerAndUploadProps) {
   const [activeTab, setActiveTab] = useState<'yape' | 'plin' | 'transferencia' | 'tarjeta'>('yape');
@@ -37,6 +49,217 @@ export default function PaymentTimerAndUpload({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Estado de Autenticación del Huésped
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string; name?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Formulario de Inicio de Sesión / Envío de Código
+  const [authEmail, setAuthEmail] = useState(guestEmail || '');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMethod, setAuthMethod] = useState<'otp' | 'password'>('otp');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (guestEmail && !authEmail) {
+      setAuthEmail(guestEmail);
+    }
+  }, [guestEmail, authEmail]);
+
+  // Verificar sesión activa y escuchar cambios de auth
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setCurrentUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
+        });
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthChecked(true);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session?.user) {
+        setCurrentUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+        });
+        setAuthError(null);
+        setAuthSuccess('¡Sesión activa! Tu reserva se asociará automáticamente a tu cuenta.');
+
+        try {
+          if (session.user.email) {
+            localStorage.setItem('novainn_guest_email', session.user.email);
+            const raw = localStorage.getItem('novainn_saved_codes');
+            const list: string[] = raw ? JSON.parse(raw) : [];
+            if (!list.includes(reservationCode)) {
+              list.unshift(reservationCode);
+              localStorage.setItem('novainn_saved_codes', JSON.stringify(list));
+            }
+
+            await supabase
+              .from('guests')
+              .update({ auth_user_id: session.user.id })
+              .ilike('email', session.user.email);
+          }
+        } catch {
+          // ignore
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [reservationCode]);
+
+  // Enviar código / enlace de acceso al correo
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const targetEmail = authEmail.trim().toLowerCase();
+    if (!targetEmail) {
+      setAuthError('Por favor ingresa tu correo para enviarte el código de acceso.');
+      return;
+    }
+    try {
+      setAuthLoading(true);
+      setAuthError(null);
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: targetEmail,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(window.location.pathname)}`,
+        },
+      });
+      if (error) throw error;
+      setOtpSent(true);
+      setAuthSuccess(`¡Código enviado a ${targetEmail}! Revisa tu bandeja de entrada o spam.`);
+    } catch (err: unknown) {
+      console.error('Error enviando código:', err);
+      setAuthError(err instanceof Error ? err.message : 'Error al enviar código');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Verificar código de 6 dígitos ingresado
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) {
+      setAuthError('Ingresa el código de 6 dígitos que te enviamos.');
+      return;
+    }
+    try {
+      setAuthLoading(true);
+      setAuthError(null);
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: authEmail.trim().toLowerCase(),
+        token: otpCode.trim(),
+        type: 'email',
+      });
+      if (error) throw error;
+      if (data.user) {
+        setCurrentUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
+        });
+        setAuthSuccess('¡Sesión verificada! Tu reserva ha quedado vinculada a tu cuenta.');
+      }
+    } catch (err: unknown) {
+      console.error('Error verificando código:', err);
+      setAuthError('Código incorrecto o expirado. Por favor, solicita uno nuevo.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Iniciar sesión con contraseña tradicional
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError('Ingresa tu correo y contraseña.');
+      return;
+    }
+    try {
+      setAuthLoading(true);
+      setAuthError(null);
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+      });
+      if (error) throw error;
+      if (data.user) {
+        setCurrentUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
+        });
+        setAuthSuccess('¡Sesión iniciada con éxito!');
+      }
+    } catch (err: unknown) {
+      console.error('Error al iniciar sesión:', err);
+      setAuthError('Correo o contraseña incorrectos. Si no tienes contraseña, pulsa "Código a mi Correo".');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Crear cuenta rápida con contraseña
+  const handleQuickRegister = async () => {
+    if (!authEmail.trim() || !authPassword) {
+      setAuthError('Ingresa tu correo y una contraseña para crear tu cuenta.');
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    try {
+      setAuthLoading(true);
+      setAuthError(null);
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: authEmail.trim().toLowerCase(),
+        password: authPassword,
+        options: {
+          data: {
+            full_name: guestName || undefined,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data.session?.user) {
+        setCurrentUser({
+          id: data.session.user.id,
+          email: data.session.user.email,
+          name: guestName || data.session.user.email?.split('@')[0],
+        });
+        setAuthSuccess('¡Cuenta creada y sesión iniciada! Reserva vinculada.');
+      } else {
+        setAuthSuccess('¡Cuenta registrada! Te hemos enviado un correo de confirmación.');
+      }
+    } catch (err: unknown) {
+      console.error('Error al crear cuenta:', err);
+      setAuthError(err instanceof Error ? err.message : 'Error al registrar usuario');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   // Cronómetro de 15 minutos
   const [timeLeft, setTimeLeft] = useState<{ minutes: number; seconds: number; isExpired: boolean }>({
@@ -74,6 +297,14 @@ export default function PaymentTimerAndUpload({
 
   const handleVoucherUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      setUploadError('Para finalizar el pago y que tu reserva quede guardada en tu cuenta, debes iniciar sesión arriba con tu correo o código.');
+      const el = document.getElementById('auth-verification-box');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     if (!operationNumber.trim()) {
       setUploadError('Por favor ingresa el número de operación del pago.');
       return;
@@ -261,6 +492,217 @@ export default function PaymentTimerAndUpload({
           <div className="w-12" />
         </div>
 
+        {/* ============================================================ */}
+        {/* SECCIÓN OBLIGATORIA: IDENTIFICACIÓN Y VINCULACIÓN DE CUENTA  */}
+        {/* ============================================================ */}
+        {currentUser ? (
+          <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white text-sm">
+                    {currentUser.name || currentUser.email}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 uppercase tracking-wider">
+                    Sesión Activa
+                  </span>
+                </div>
+                <p className="text-emerald-300/80 text-[11px] mt-0.5">
+                  Esta reserva ({reservationCode}) quedará guardada permanentemente en tu cuenta ({currentUser.email}).
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5 self-start sm:self-auto bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+              <Check className="w-4 h-4" />
+              <span>Cuenta Vinculada</span>
+            </span>
+          </div>
+        ) : (
+          <div
+            id="auth-verification-box"
+            className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-blue-950/40 border-2 border-amber-500/40 shadow-2xl space-y-4 relative overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>Inicia sesión para terminar tu pago</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Requerido
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Para que tu pago quede registrado y tu reserva se guarde en tu perfil de cliente, identifícate en segundos.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Pestañas de método de acceso */}
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/40 border border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setAuthMethod('otp')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  authMethod === 'otp'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Código a mi Correo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMethod('password')}
+                className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  authMethod === 'password'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Con Contraseña</span>
+              </button>
+            </div>
+
+            {/* Formulario OTP (Código / Enlace a correo) */}
+            {authMethod === 'otp' && (
+              <div className="space-y-3 pt-1">
+                {!otpSent ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-300 block mb-1">
+                        Correo Electrónico del Huésped
+                      </label>
+                      <input
+                        type="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="tu@correo.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={authLoading}
+                      className="apple-button-accent w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {authLoading ? (
+                        <span>Enviando código...</span>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Enviar Código / Enlace a mi Correo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 animate-in fade-in duration-200">
+                    <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/25 text-xs text-sky-200">
+                      <p className="font-semibold">¡Te enviamos un código de 6 dígitos a <span className="text-white underline">{authEmail}</span>!</p>
+                      <p className="text-[11px] text-sky-300/80 mt-0.5">Ingrésalo aquí abajo o abre el enlace que te llegó al correo.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={8}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="Código de 6 dígitos"
+                        className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/20 text-white font-mono text-center tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={authLoading}
+                        className="apple-button-gold px-4 py-2.5 rounded-xl text-xs font-bold uppercase cursor-pointer disabled:opacity-50"
+                      >
+                        {authLoading ? 'Verificando...' : 'Ingresar'}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={authLoading}
+                      className="text-[11px] text-slate-400 hover:text-white underline block mx-auto cursor-pointer"
+                    >
+                      ¿No te llegó? Reenviar código
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Formulario Contraseña */}
+            {authMethod === 'password' && (
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="tu@correo.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">Contraseña</label>
+                  <input
+                    type="password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/20 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePasswordLogin}
+                    disabled={authLoading}
+                    className="apple-button-accent py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Iniciar Sesión</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickRegister}
+                    disabled={authLoading}
+                    className="apple-pill-btn py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-200 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Crear Cuenta</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {authError && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300">
+                {authError}
+              </div>
+            )}
+
+            {authSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{authSuccess}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* PAGO CON YAPE O PLIN */}
         {(activeTab === 'yape' || activeTab === 'plin') && (
           <div className="space-y-6">
@@ -373,6 +815,11 @@ export default function PaymentTimerAndUpload({
               >
                 {uploading ? (
                   <span>Verificando y enviando comprobante...</span>
+                ) : !currentUser ? (
+                  <>
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Identifícate arriba para Confirmar Pago</span>
+                  </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
@@ -500,7 +947,16 @@ export default function PaymentTimerAndUpload({
                 disabled={uploading}
                 className="apple-button-gold w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                {uploading ? 'Enviando comprobante...' : 'Confirmar Transferencia'}
+                {uploading ? (
+                  'Enviando comprobante...'
+                ) : !currentUser ? (
+                  <span className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-slate-900" />
+                    <span>Identifícate arriba para Confirmar</span>
+                  </span>
+                ) : (
+                  'Confirmar Transferencia'
+                )}
               </button>
             </form>
           </div>
@@ -563,16 +1019,31 @@ export default function PaymentTimerAndUpload({
 
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                if (!currentUser) {
+                  setUploadError('Para pagar y que tu reserva quede guardada en tu cuenta, debes identificarte arriba.');
+                  const el = document.getElementById('auth-verification-box');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  return;
+                }
                 onPaymentSubmitted({
                   method: 'tarjeta_credito_debito',
                   operationNumber: `AUTH-${Date.now().toString().slice(-6)}`,
-                })
-              }
+                });
+              }}
               className="apple-button-accent w-full py-4 rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <CreditCard className="w-4 h-4" />
-              <span>Pagar {formatCurrency(totalAmount)}</span>
+              {!currentUser ? (
+                <>
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  <span>Identifícate arriba para Pagar</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pagar {formatCurrency(totalAmount)}</span>
+                </>
+              )}
             </button>
           </div>
         )}
